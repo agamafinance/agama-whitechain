@@ -1,0 +1,17 @@
+{
+  "name": "agama-whitechain-keeper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "status": "bun src/cli.ts status",
+    "tick": "bun src/cli.ts tick",
+    "relay": "bun src/cli.ts relay"
+  },
+  "dependencies": {
+    "viem": "^2.48.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.2"
+  }
+}
