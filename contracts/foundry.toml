@@ -24,8 +24,5 @@ depth = 64
 whitechain_sepolia = "https://rpc.testnet.whitechain.io"
 sepolia = "${SEPOLIA_RPC_URL}"
 
-[etherscan]
-whitechain_sepolia = { key = "blockscout", url = "https://explorer.testnet.whitechain.io/api/", chain = 1874 }
-
 [fmt]
 line_length = 120
