@@ -9,6 +9,8 @@ solc = "0.8.28"
 evm_version = "prague"
 optimizer = true
 optimizer_runs = 10_000
+# The messenger decodes a whole CCTP envelope in one frame; the IR pipeline keeps it readable as written.
+via_ir = true
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
 [fuzz]
