@@ -5,7 +5,7 @@ import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { card, primaryBtn, Status, Step } from '@/components/ui';
 import { fmt, usd } from '@/lib/format';
 import { wcAddress, wcTx } from '@/lib/chains';
-import { useActions, useRequests, useUser, useVault } from '@/lib/protocol';
+import { netApy, useActions, useBasis, useRequests, useUser, useVault } from '@/lib/protocol';
 import { useState } from 'react';
 
 export default function PortfolioPage() {
@@ -13,6 +13,7 @@ export default function PortfolioPage() {
   const user = useUser();
   const { vault } = useVault();
   const { data: requests } = useRequests();
+  const { data: basis } = useBasis();
   const act = useActions();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ text?: string; error?: string }>();
@@ -24,6 +25,12 @@ export default function PortfolioPage() {
   // vault, so leaving it out made the money look like it had gone the moment somebody asked for it.
   const netWorth =
     user.usdc !== undefined && agValue !== undefined ? user.usdc + agValue + queued : undefined;
+
+  // Earned: what is held now, plus everything taken out or queued to come out, less everything put in.
+  const earned =
+    basis && agValue !== undefined ? agValue + basis.withdrawn + basis.queued - basis.deposited : undefined;
+  const apy = netApy(vault);
+  const perDay = agValue !== undefined && apy !== undefined ? (Number(agValue) / 1e6) * (apy / 100) / 365 : undefined;
 
   async function settle() {
     setBusy(true);
@@ -56,6 +63,24 @@ export default function PortfolioPage() {
               <div className="text-[12px] uppercase tracking-wider text-fg-muted">Net worth</div>
               <div className="text-[34px] text-fg font-semibold tabular-nums">{usd(netWorth)}</div>
               {queued > 0n && <div className="text-[12px] text-fg-muted">Includes {usd(queued)} queued to come out.</div>}
+              <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#254839]/10 pt-4 sm:grid-cols-4">
+                <Figure label="Deposited" value={usd(basis?.deposited)} />
+                <Figure label="Taken out" value={usd(basis ? basis.withdrawn + basis.queued : undefined)} />
+                <Figure
+                  label="Earned"
+                  value={earned === undefined ? '-' : `${earned >= 0n ? '+' : '-'}${usd(earned >= 0n ? earned : -earned, 4)}`}
+                  strong
+                />
+                <Figure
+                  label="At today's rate"
+                  value={perDay === undefined ? '-' : `$${perDay.toLocaleString('en-US', { maximumFractionDigits: 4 })} a day`}
+                />
+              </div>
+              {basis && basis.deposits === 0 && (user.agusd ?? 0n) > 0n && (
+                <div className="mt-2 text-[12px] text-fg-muted">
+                  This wallet received its agUSD rather than depositing it, so what it paid is not on chain.
+                </div>
+              )}
               <a
                 href={wcAddress(user.address)}
                 target="_blank"
@@ -135,6 +160,15 @@ export default function PortfolioPage() {
         )}
       </div>
     </section>
+  );
+}
+
+function Figure({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-fg-muted">{label}</div>
+      <div className={`tabular-nums ${strong ? 'text-[18px] font-semibold text-[#2f7d5b]' : 'text-[16px] text-fg'}`}>{value}</div>
+    </div>
   );
 }
 
