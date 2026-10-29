@@ -16,6 +16,8 @@ import {
   TestUSDCAbi,
 } from '@abi';
 import { ETHEREUM, WHITECHAIN } from './deployments';
+import { fmt } from './format';
+import { useToasts } from '@/components/Toasts';
 import { l1, whitechainSepolia } from './chains';
 
 const chainId = whitechainSepolia.id;
@@ -292,31 +294,63 @@ export function useRequests() {
 // Writes
 // ---------------------------------------------------------------------------
 
+/// A wallet error, trimmed to the sentence a person can act on.
+function reason(e: unknown): string {
+  const err = e as { shortMessage?: string; message?: string; name?: string };
+  if (err?.name === 'UserRejectedRequestError' || /rejected|denied/i.test(err?.message ?? '')) {
+    return 'You declined it in the wallet.';
+  }
+  return err?.shortMessage ?? err?.message ?? 'The transaction failed.';
+}
+
 export function useActions() {
   const config = useConfig();
   const qc = useQueryClient();
+  const toast = useToasts();
   const { chainId: walletChain } = useAccount();
   const { switchChainAsync } = useSwitchChain();
 
-  async function send(req: Parameters<typeof writeContract>[1]) {
-    if (walletChain !== chainId) await switchChainAsync({ chainId });
-    const hash = await writeContract(config, { ...req, chainId } as any);
-    const receipt = await waitForTransactionReceipt(config, { hash, chainId });
-    if (receipt.status !== 'success') throw new Error('The transaction reverted.');
-    await qc.invalidateQueries();
-    return hash;
+  async function send(title: string, done: string, req: Parameters<typeof writeContract>[1]) {
+    const id = toast.start(title);
+    try {
+      if (walletChain !== chainId) await switchChainAsync({ chainId });
+      const hash = await writeContract(config, { ...req, chainId } as any);
+      toast.hash(id, hash);
+      const receipt = await waitForTransactionReceipt(config, { hash, chainId });
+      if (receipt.status !== 'success') throw new Error('The transaction reverted.');
+      toast.done(id, done);
+      await qc.invalidateQueries();
+      return hash;
+    } catch (e) {
+      toast.fail(id, reason(e));
+      throw new Error(reason(e));
+    }
   }
 
   return {
-    faucet: () => send({ address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'faucet' } as any),
+    faucet: () =>
+      send('Test USDC from the faucet', '10,000 USDC is in your wallet.', {
+        address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'faucet',
+      } as any),
     approve: (amount: bigint) =>
-      send({ address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'approve', args: [WHITECHAIN.agUSD, amount] } as any),
+      send('Approve USDC for agUSD', 'The vault can take your deposit.', {
+        address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'approve', args: [WHITECHAIN.agUSD, amount],
+      } as any),
     deposit: (amount: bigint, receiver: Address) =>
-      send({ address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'deposit', args: [amount, receiver] } as any),
+      send(`Deposit ${fmt(amount)} USDC`, 'agUSD minted. It is earning from this block.', {
+        address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'deposit', args: [amount, receiver],
+      } as any),
     redeem: (shares: bigint, owner: Address) =>
-      send({ address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'redeem', args: [shares, owner, owner] } as any),
+      send(`Withdraw ${fmt(shares)} agUSD`, 'USDC is in your wallet.', {
+        address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'redeem', args: [shares, owner, owner],
+      } as any),
     requestRedeem: (shares: bigint, owner: Address) =>
-      send({ address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'requestRedeem', args: [shares, owner, owner] } as any),
-    settle: () => send({ address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'settleRedemptions', args: [16n] } as any),
+      send(`Queue ${fmt(shares)} agUSD`, 'Priced now, paid as cash comes home. See Portfolio.', {
+        address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'requestRedeem', args: [shares, owner, owner],
+      } as any),
+    settle: () =>
+      send('Settle the queue', 'Paid what the cash covers.', {
+        address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'settleRedemptions', args: [16n],
+      } as any),
   };
 }
