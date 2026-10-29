@@ -125,6 +125,37 @@ These facts come from [docs.whitechain.io](https://docs.whitechain.io) and were 
 - **The Builders Program** funds up to $300K per team in milestone tranches.
 - **Prague EVM.** PUSH0, MCOPY and transient storage all work, Multicall3 is at the canonical address, and Blockscout verification works out of the box.
 
+## The app
+
+[agama-whitechain.vercel.app](https://agama-whitechain.vercel.app). It is a Next 16 app built with wagmi and RainbowKit, and it uses the same design system as app.agama.finance/stellar. Every figure on it is read from one of the two chains.
+
+| Page | What it shows |
+| --- | --- |
+| **Earn** | Deposit and withdraw. The card says before you click whether a withdrawal will be instant or queued. Below it are the price chart, the route with a live amount at every stop, and the credit sleeves. |
+| **Portfolio** | What you hold, with queued exits counted. Deposited, taken out and earned come from the vault's own ERC-4626 events. A queued exit shows whether it has been paid. |
+| **Transparency** | Both chains read live, side by side. The vault's deployed figure is checked against the L1 position plus anything in flight. Every crossing, wire, mark and collection appears newest first, with a link to its transaction. |
+| **Faucet** | WBT from Whitechain's faucet, and test USDC straight from the contract. |
+
+Every transaction raises a toast. It shows the wait for your wallet, then the confirmation, then the result, with an explorer link as soon as there is a hash.
+
+The share price is shown as assets over supply, to eight places. `sharePrice()` rounds to the USDC unit, and a day of testnet yield sits below that.
+
+The chart has two views. LIVE draws only the marks the vault has recorded on chain. The other ranges draw a modelled path around the book's rate, and they say so.
+
+## The keeper
+
+[`.github/workflows/keeper.yml`](.github/workflows/keeper.yml) runs `bun src/cli.ts tick` every fifteen minutes. Each tick does the following:
+
+1. relays any messages waiting in either direction
+2. runs the simulated issuer's book: accrue, mark against a loan tape, wire the excess to custody
+3. refills the vault's buffer from the book when it falls under 10%, and allocates the excess when it rises above 30%
+4. marks the vault, counting legs still in flight
+5. settles the queue
+
+The keys are testnet keys, stored as repository secrets.
+
+[`docs/E2E.md`](docs/E2E.md) is a live run with a holder who is not the deployer: faucet, deposit, instant exit, a queued exit above the buffer, and the keeper paying it from Ethereum. Running it found three keeper bugs, and the document records them.
+
 ## Live on testnet
 
 **Whitechain Sepolia** (chain 1874), verified on Blockscout
