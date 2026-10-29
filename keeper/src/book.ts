@@ -49,7 +49,9 @@ export async function runBook() {
   }
 
   // 2. Wire the cash above the issuer's own buffer to custody.
-  const keep = (totalAssets * BigInt(BOOK.cashBps)) / 10_000n;
+  // Rounded up: the contract caps the book at floor(90%) of its assets, so the cash kept has to be the ceiling of
+  // the other 10% or the wire overshoots the cap by one unit and is refused.
+  const keep = (totalAssets * BigInt(BOOK.cashBps) + 9_999n) / 10_000n;
   if (cash > keep + 1_000_000n) {
     await send(E.issuer, AbfAssetIssuerAbi, 'offRamp', [cash - keep, ref('wire')]);
     if (navAt === 0n || offChain === 0n) {
