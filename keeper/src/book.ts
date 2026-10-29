@@ -3,18 +3,14 @@
 // operations team; here it is a key and a clock.
 import { keccak256, toHex, type Hex } from 'viem';
 import { AbfAssetIssuerAbi, AgamaL1ReceiverAbi, TestUSDCAbi } from '../../abi';
-import { BOOK, E, eth } from './config';
+import { BOOK, E, eth, sendChecked } from './config';
 
 const YEAR = 365n * 24n * 3600n;
 const read = <T>(functionName: string, args: unknown[] = [], address: Hex = E.issuer, abi: any = AbfAssetIssuerAbi) =>
   eth.public.readContract({ address, abi, functionName, args } as any) as Promise<T>;
 
-async function send(address: Hex, abi: any, functionName: string, args: unknown[]) {
-  const hash = await eth.wallet.writeContract({ address, abi, functionName, args } as any);
-  await eth.public.waitForTransactionReceipt({ hash });
-  console.log(`  ${functionName.padEnd(18)} ${hash}`);
-  return hash;
-}
+const send = (address: Hex, abi: any, functionName: string, args: unknown[]) =>
+  sendChecked(eth, { address, abi, functionName, args });
 
 const ref = (label: string) => keccak256(toHex(`${label}:${Date.now()}`));
 
@@ -31,33 +27,36 @@ function loanTape(book: bigint, at: number) {
 }
 
 export async function runBook() {
-  const [cash, offChain, totalAssets, navAt] = await Promise.all([
+  const [cash, offChain, navAt, capBps] = await Promise.all([
     read<bigint>('cash'),
     read<bigint>('offChainAssets'),
-    read<bigint>('totalAssets'),
     read<bigint>('navUpdatedAt'),
+    read<number>('maxOffChainBps'),
   ]);
+  let book = offChain;
   const now = BigInt(Math.floor(Date.now() / 1000));
 
   // 1. Accrue what the book earned since it was last marked.
   if (offChain > 0n && navAt > 0n && now > navAt) {
     const accrued = (offChain * BigInt(BOOK.aprBps) * (now - navAt)) / (10_000n * YEAR);
     if (accrued > 0n) {
-      const next = offChain + accrued;
-      await send(E.issuer, AbfAssetIssuerAbi, 'reportNav', [next, keccak256(toHex(loanTape(next, Number(now))))]);
+      book = offChain + accrued;
+      await send(E.issuer, AbfAssetIssuerAbi, 'reportNav', [book, keccak256(toHex(loanTape(book, Number(now))))]);
     }
   }
 
-  // 2. Wire the cash above the issuer's own buffer to custody.
-  // Rounded up: the contract caps the book at floor(90%) of its assets, so the cash kept has to be the ceiling of
-  // the other 10% or the wire overshoots the cap by one unit and is refused.
-  const keep = (totalAssets * BigInt(BOOK.cashBps) + 9_999n) / 10_000n;
-  if (cash > keep + 1_000_000n) {
-    await send(E.issuer, AbfAssetIssuerAbi, 'offRamp', [cash - keep, ref('wire')]);
+  // 2. Wire whatever the book cap allows to custody, sized with the contract's own formula against the book just
+  //    marked above. Not re-read: a public endpoint can answer a read straight after a write from a node that has
+  //    not seen it, and a wire sized off the old mark overshoots the cap the contract checks against the new one.
+  const cap = ((cash + book) * BigInt(capBps)) / 10_000n;
+  const wire = cap > book ? cap - book : 0n;
+  void BOOK.cashBps;
+  if (wire > 1_000_000n) {
+    await send(E.issuer, AbfAssetIssuerAbi, 'offRamp', [wire, ref('wire')]);
     if (navAt === 0n || offChain === 0n) {
       // Start the clock on a fresh book.
-      const book = await read<bigint>('offChainAssets');
-      await send(E.issuer, AbfAssetIssuerAbi, 'reportNav', [book, keccak256(toHex(loanTape(book, Number(now))))]);
+      const fresh = book + wire;
+      await send(E.issuer, AbfAssetIssuerAbi, 'reportNav', [fresh, keccak256(toHex(loanTape(fresh, Number(now))))]);
     }
   }
 }
