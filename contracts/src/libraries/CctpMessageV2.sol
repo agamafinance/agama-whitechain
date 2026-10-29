@@ -40,47 +40,47 @@ library CctpMessageV2 {
     error MalformedMessage();
 
     function formatMessage(
-        uint32 sourceDomain,
-        uint32 destinationDomain,
-        bytes32 nonce,
-        bytes32 sender,
-        bytes32 recipient,
-        bytes32 destinationCaller,
-        uint32 minFinalityThreshold,
-        bytes memory body
+        uint32 sourceDomain_,
+        uint32 destinationDomain_,
+        bytes32 nonce_,
+        bytes32 sender_,
+        bytes32 recipient_,
+        bytes32 destinationCaller_,
+        uint32 minFinalityThreshold_,
+        bytes memory body_
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
             MESSAGE_VERSION,
-            sourceDomain,
-            destinationDomain,
-            nonce,
-            sender,
-            recipient,
-            destinationCaller,
-            minFinalityThreshold,
-            uint32(0), // finalityThresholdExecuted is filled in by the attester, never by the sender
-            body
+            sourceDomain_,
+            destinationDomain_,
+            nonce_,
+            sender_,
+            recipient_,
+            destinationCaller_,
+            minFinalityThreshold_,
+            uint32(0), // finalityThresholdExecuted is filled in by the attester, never by the sender_
+            body_
         );
     }
 
     function formatBurnBody(
-        address burnToken,
-        bytes32 mintRecipient,
-        uint256 amount,
-        bytes32 messageSender,
-        uint256 maxFee,
-        bytes memory hookData
+        address burnToken_,
+        bytes32 mintRecipient_,
+        uint256 amount_,
+        bytes32 messageSender_,
+        uint256 maxFee_,
+        bytes memory hookData_
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
             BURN_MESSAGE_VERSION,
-            toBytes32(burnToken),
-            mintRecipient,
-            amount,
-            messageSender,
-            maxFee,
+            toBytes32(burnToken_),
+            mintRecipient_,
+            amount_,
+            messageSender_,
+            maxFee_,
             uint256(0), // feeExecuted
             uint256(0), // expirationBlock
-            hookData
+            hookData_
         );
     }
 
