@@ -62,3 +62,17 @@ export const BOOK = {
 export const BUFFER = { targetBps: 2_000, triggerBps: 3_000, refillBps: 1_000 };
 
 export const STATE_FILE = resolve(import.meta.dir, '../state.json');
+
+/// Sends and waits, and refuses to call a reverted transaction done. A receipt comes back for a revert too, and
+/// treating its arrival as success is how a refused wire was once reported as sent.
+export async function sendChecked(
+  chain: typeof wc | typeof eth,
+  req: { address: `0x${string}`; abi: any; functionName: string; args?: unknown[] },
+  label = req.functionName,
+) {
+  const hash = await (chain.wallet as any).writeContract(req);
+  const receipt = await chain.public.waitForTransactionReceipt({ hash });
+  if (receipt.status !== 'success') throw new Error(`${label} reverted on chain: ${hash}`);
+  console.log(`  ${label.padEnd(18)} ${hash}`);
+  return hash as `0x${string}`;
+}
