@@ -38,6 +38,15 @@ export async function rebalance() {
   return false;
 }
 
+/// How much the buffer needs to be whole again, once it has fallen under the refill line. Paying the queue can
+/// drain it to nothing, and an empty buffer turns the next instant exit into a queued one.
+export async function refill() {
+  const s = await snapshot();
+  const line = (s.totalAssets * BigInt(BUFFER.refillBps)) / 10_000n;
+  const target = (s.totalAssets * BigInt(BUFFER.targetBps)) / 10_000n;
+  return s.liquid < line && s.deployed > 0n ? target - s.liquid : 0n;
+}
+
 /// How much the queue needs from the book: what is owed beyond the cash already here, plus the buffer target.
 export async function shortfall() {
   const s = await snapshot();
