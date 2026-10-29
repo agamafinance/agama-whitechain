@@ -156,23 +156,23 @@ export default function TransparencyPage() {
             <h2 className="text-[17px] font-semibold text-fg">Why Whitechain</h2>
             <ul className="mt-3 space-y-3 text-[13px] text-fg-muted">
               <li>
-                <span className="text-fg">An OP Stack rollup that settles on Ethereum.</span> The credit book&apos;s
+                <span className="text-fg">An OP Stack rollup that settles on Ethereum.</span>{' '}The credit book&apos;s
                 issuer lives on Ethereum, so agUSD sits one hop from its collateral on the same security root.
               </li>
               <li>
-                <span className="text-fg">One second blocks, cents of gas.</span> Deposits and instant exits confirm
+                <span className="text-fg">One second blocks, cents of gas.</span>{' '}Deposits and instant exits confirm
                 before the page repaints, which is what a dollar product needs to feel like cash.
               </li>
               <li>
-                <span className="text-fg">WhiteBIT behind it.</span> A European exchange with 10M+ clients and WBT
+                <span className="text-fg">WhiteBIT behind it.</span>{' '}A European exchange with 10M+ clients and WBT
                 withdrawable straight to the chain: the shortest path from a retail account to a yielding dollar.
               </li>
               <li>
-                <span className="text-fg">Built for asset-backed businesses.</span> Whitechain pitches itself to
+                <span className="text-fg">Built for asset-backed businesses.</span>{' '}Whitechain pitches itself to
                 fintechs, banks and tokenization desks, which are the originators an ABF book is made of.
               </li>
               <li>
-                <span className="text-fg">CCTP ready on day one.</span> Circle has not given Whitechain a domain yet.
+                <span className="text-fg">CCTP ready on day one.</span>{' '}Circle has not given Whitechain a domain yet.
                 The contracts speak CCTP V2 byte for byte, so the day it does, the messenger address is the only
                 thing that changes.
               </li>
