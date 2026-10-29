@@ -57,8 +57,8 @@ export const BOOK = {
   cashBps: 1_000,
 };
 
-/// The vault's buffer policy: allocate down to 20% liquid, and only once it is above 30%, so a single deposit does
-/// not trigger a crossing.
-export const BUFFER = { targetBps: 2_000, triggerBps: 3_000 };
+/// The vault's buffer policy: aim for 20% liquid. Allocate the excess once it is above 30%, and bring cash home
+/// once it is under 10%, so neither a single deposit nor a single exit triggers a crossing.
+export const BUFFER = { targetBps: 2_000, triggerBps: 3_000, refillBps: 1_000 };
 
 export const STATE_FILE = resolve(import.meta.dir, '../state.json');

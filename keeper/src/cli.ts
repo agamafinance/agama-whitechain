@@ -4,7 +4,7 @@ import { AbfAssetIssuerAbi, CrossChainAllocatorAbi } from '../../abi';
 import { E, eth, W, wc } from './config';
 import { relayAll } from './relay';
 import { bringHome, runBook } from './book';
-import { navOfBook, rebalance, report, settleQueue, shortfall, snapshot } from './vault';
+import { navOfBook, rebalance, refill, report, settleQueue, shortfall, snapshot } from './vault';
 
 const usd = (v: bigint) => `$${Number(formatUnits(v, 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
@@ -28,9 +28,9 @@ async function tick() {
   await relayAll();
   console.log('book');
   await runBook();
-  const short = await shortfall();
+  const short = (await shortfall()) + (await refill());
   if (short > 0n) {
-    console.log(`queue short ${usd(short)}, bringing it home`);
+    console.log(`short ${usd(short)} for the queue and the buffer, bringing it home`);
     await bringHome(short);
   }
   console.log('rebalance');
