@@ -7,6 +7,7 @@ import { fmt, usd } from '@/lib/format';
 import { wcAddress, wcTx } from '@/lib/chains';
 import { netApy, useActions, useBasis, useRequests, useUser, useVault } from '@/lib/protocol';
 import { useState } from 'react';
+import { asset } from '@/lib/asset';
 
 export default function PortfolioPage() {
   const { openConnectModal } = useConnectModal();
@@ -181,7 +182,7 @@ function Position({
       className="flex items-center gap-4 rounded-2xl bg-[#fdfaf1] px-5 py-4 shadow-[0_1px_3px_rgba(20,50,35,0.06),0_10px_30px_rgba(20,50,35,0.06)] hover:shadow-[0_1px_3px_rgba(20,50,35,0.08),0_16px_40px_rgba(20,50,35,0.12)]"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={logo} alt="" className="h-9 w-9" />
+      <img src={asset(logo)} alt="" className="h-9 w-9" />
       <div className="min-w-0">
         <div className="text-[15px] font-medium text-fg">{symbol}</div>
         <div className="text-[12px] text-fg-muted">{name}</div>

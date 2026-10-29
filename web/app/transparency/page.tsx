@@ -8,6 +8,7 @@ import { ETHEREUM, WHITECHAIN } from '@/lib/deployments';
 import { ethAddress, ethTx, wcAddress, wcTx } from '@/lib/chains';
 import { ago, fmt, short, usd } from '@/lib/format';
 import { precisePrice, useActivity, useBook, useVault } from '@/lib/protocol';
+import { asset } from '@/lib/asset';
 
 export default function TransparencyPage() {
   const { vault, totalSent, totalReturned, config } = useVault();
@@ -94,7 +95,7 @@ export default function TransparencyPage() {
                       <td className="py-2.5">
                         <span className="inline-flex items-center gap-1.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={e.chain === 'whitechain' ? '/whitechain.svg' : '/logos/eth.svg'} alt="" className="h-3.5 w-3.5" />
+                          <img src={asset(e.chain === 'whitechain' ? '/whitechain.svg' : '/logos/eth.svg')} alt="" className="h-3.5 w-3.5" />
                           {e.chain === 'whitechain' ? 'Whitechain' : 'Ethereum'}
                         </span>
                       </td>
@@ -190,7 +191,7 @@ function Column({ title, logo, children }: { title: string; logo: string; childr
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white ring-1 ring-[#254839]/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt="" className="h-4 w-4 object-contain" />
+          <img src={asset(logo)} alt="" className="h-4 w-4 object-contain" />
         </span>
         <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
       </div>
