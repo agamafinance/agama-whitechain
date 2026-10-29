@@ -51,14 +51,14 @@ export function Navbar() {
               href="https://whitechain.io"
               target="_blank"
               rel="noreferrer"
-              className="pill-outline flex items-center gap-1.5 rounded-full h-10 pl-[6px] pr-3 text-white"
+              className="pill-outline flex items-center gap-1.5 rounded-full h-10 pl-[10px] pr-[10px] sm:pl-[6px] sm:pr-3 text-white"
               title="Whitechain Sepolia testnet"
             >
               <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/whitechain.svg" alt="" className="h-[14px] w-[14px] object-contain" />
               </span>
-              <span className="text-[13px]">Whitechain</span>
+              <span className="hidden sm:inline text-[13px]">Whitechain</span>
             </a>
             <ConnectPill />
           </div>
