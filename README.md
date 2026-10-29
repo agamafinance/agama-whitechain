@@ -125,6 +125,41 @@ These facts come from [docs.whitechain.io](https://docs.whitechain.io) and were 
 - **The Builders Program** funds up to $300K per team in milestone tranches.
 - **Prague EVM.** PUSH0, MCOPY and transient storage all work, Multicall3 is at the canonical address, and Blockscout verification works out of the box.
 
+## Live on testnet
+
+**Whitechain Sepolia** (chain 1874), verified on Blockscout
+
+| Contract | Address |
+| --- | --- |
+| agUSD | [`0x4F78D5Ba2242F77CfD75b7B2a1BD8EEf82DA67d8`](https://explorer.testnet.whitechain.io/address/0x4F78D5Ba2242F77CfD75b7B2a1BD8EEf82DA67d8) |
+| CrossChainAllocator | [`0x04477d606b751A7CBC6De478c749d0ffC726416f`](https://explorer.testnet.whitechain.io/address/0x04477d606b751A7CBC6De478c749d0ffC726416f) |
+| AttestedMessenger | [`0x6436CAC378FA46b2Cd4ff455Ff0fd07E99eb699b`](https://explorer.testnet.whitechain.io/address/0x6436CAC378FA46b2Cd4ff455Ff0fd07E99eb699b) |
+| TestUSDC | [`0x5b00EAc2E4359b818314E7F42c2805e29d587658`](https://explorer.testnet.whitechain.io/address/0x5b00EAc2E4359b818314E7F42c2805e29d587658) |
+
+**Ethereum Sepolia** (chain 11155111, CCTP domain 0), verified on Sourcify
+
+| Contract | Address |
+| --- | --- |
+| AgamaL1Receiver | [`0xB398Ecc57D7842aB701310f868349f1f2E2D2746`](https://sepolia.etherscan.io/address/0xB398Ecc57D7842aB701310f868349f1f2E2D2746) |
+| AbfAssetIssuer | [`0xe23f65c7159ffa68D6b7eeeEDF4FB275a68d4Acd`](https://sepolia.etherscan.io/address/0xe23f65c7159ffa68D6b7eeeEDF4FB275a68d4Acd) |
+| AttestedMessenger | [`0x1439F556A55DD3dc72b6b24a2Dd8B09dD080BF7F`](https://sepolia.etherscan.io/address/0x1439F556A55DD3dc72b6b24a2Dd8B09dD080BF7F) |
+| TestUSDC | [`0x0A950Ec189d4470a527a142929cD9C395a91FFe6`](https://sepolia.etherscan.io/address/0x0A950Ec189d4470a527a142929cD9C395a91FFe6) |
+
+**The route, run once on 29 October 2026**
+
+| Step | Chain | Transaction |
+| --- | --- | --- |
+| Allocate 8,000 USDC, burned towards Ethereum | Whitechain | [`0x6478d7…ec1f`](https://explorer.testnet.whitechain.io/tx/0x6478d7c97a0e46b310536d37cbf7152144a68140045c235f64e9e623e1b5ec1f) |
+| Relay, mint and subscribe in one call | Ethereum | [`0xe12a4f…a675`](https://sepolia.etherscan.io/tx/0xe12a4f192a25c1763b6248f7d43c393c39cf340cd20e566e4e8d8aa4c88aa675) |
+| Issuer wires 7,200 to custody | Ethereum | [`0x596dcc…ffff`](https://sepolia.etherscan.io/tx/0x596dcc08f13e46d94dae34989c23cbd7d35fdb16971a2a9eddda7f9279ebffff) |
+| Book marked against a loan tape | Ethereum | [`0xc8e6ec…4bbc`](https://sepolia.etherscan.io/tx/0xc8e6ec14aa94bd936e9ec3dab3a571b3238c26ef9e00ccdbf30f764f61724bbc) |
+| Redeem 500 of notes, burned home | Ethereum | [`0x9ee2e5…fffc`](https://sepolia.etherscan.io/tx/0x9ee2e5c5aa2293ade3034313ef8a14e6b8c5b90d46ea512d06df3f184404fffc) |
+| Settled into the vault | Whitechain | [`0x7c4b10…445d`](https://explorer.testnet.whitechain.io/tx/0x7c4b101787a053cb724b45e6ab7488dce4e817484c556a10517f421b0d75445d) |
+
+Ethereum Sepolia charges contract creation far above what forge simulates. TestUSDC estimated at about 1.5M and
+consumed 9.8M, so the first attempt at six times the estimate ran out of gas. The L1 step is deployed with
+`--gas-estimate-multiplier 1500`; at Sepolia's gas price that costs nothing worth counting.
+
 ## Run it
 
 ```sh
@@ -135,7 +170,7 @@ forge test                       # 45 tests: unit, fuzz, invariants, the whole r
 # deploy (DEPLOYER_KEY, ATTESTER in contracts/.env, see .env.example)
 forge script script/DeployWhitechain.s.sol --rpc-url whitechain_sepolia --broadcast \
   --verify --verifier blockscout --verifier-url https://explorer.testnet.whitechain.io/api/
-forge script script/DeployL1.s.sol --rpc-url sepolia --broadcast
+forge script script/DeployL1.s.sol --rpc-url sepolia --broadcast --gas-estimate-multiplier 1500
 forge script script/WireWhitechain.s.sol --rpc-url whitechain_sepolia --broadcast
 ./script/export-abis.sh
 
