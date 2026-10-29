@@ -4,7 +4,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { short } from '@/lib/format';
 
 const pill =
-  'pill-outline flex h-10 items-center gap-2 rounded-full px-[17px] text-[14px] font-medium whitespace-nowrap text-white';
+  'pill-outline flex h-10 items-center gap-2 rounded-full px-[14px] sm:px-[17px] text-[14px] font-medium whitespace-nowrap text-white';
 
 /// RainbowKit's state machine in the app's own pill. A wallet on another chain is offered the switch rather than a
 /// red badge, because the only thing it can do here is be on Whitechain.
@@ -16,14 +16,14 @@ export function ConnectPill() {
         if (!account) {
           return (
             <button type="button" onClick={openConnectModal} className={pill}>
-              Connect Wallet
+              <span>Connect<span className="hidden sm:inline"> Wallet</span></span>
             </button>
           );
         }
         if (chain?.unsupported) {
           return (
             <button type="button" onClick={openChainModal} className={`${pill} !bg-[#b4571f]/80`}>
-              Switch to Whitechain
+              <span>Switch<span className="hidden sm:inline"> to Whitechain</span></span>
             </button>
           );
         }
