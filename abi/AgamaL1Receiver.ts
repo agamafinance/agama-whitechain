@@ -656,5 +656,4 @@ export const AgamaL1ReceiverAbi = [
     "name": "ZeroAmount",
     "inputs": []
   }
-]
- as const;
+] as const;

@@ -731,5 +731,4 @@ export const AttestedMessengerAbi = [
     "name": "ZeroRecipient",
     "inputs": []
   }
-]
- as const;
+] as const;
