@@ -4,3 +4,4 @@ broadcast/*/31337/
 .env
 .env.*
 !.env.example
+broadcast/**/dry-run/
