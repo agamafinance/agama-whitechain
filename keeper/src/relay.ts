@@ -29,7 +29,7 @@ export async function relayAll(): Promise<number> {
   let done = 0;
 
   // Whitechain to Ethereum: allocations, executed by the receiver, which subscribes them.
-  const out = await scan(wc.public as PublicClient, W.messenger, state.wcBlock, 20_000);
+  const out = await scan(wc.public as PublicClient, W.messenger, state.wcBlock, 10_000); // Whitechain's RPC cap
   for (const m of out.messages) {
     const used = await eth.public.readContract({ address: E.messenger, abi: AttestedMessengerAbi, functionName: 'usedNonces', args: [nonceOf(m)] });
     if (used) continue;
