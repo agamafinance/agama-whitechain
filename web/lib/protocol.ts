@@ -75,6 +75,14 @@ export function useVault() {
   };
 }
 
+/// The share price past its sixth decimal: assets over supply, both read on chain. sharePrice() rounds to the
+/// USDC unit, and on a testnet a day of yield lives below it, so the rounded figure reads as a price that never moves.
+export function precisePrice(v?: VaultState): number | undefined {
+  if (!v) return undefined;
+  if (v.totalSupply === 0n) return 1;
+  return Number(v.totalAssets) / Number(v.totalSupply);
+}
+
 /// Net of the performance fee and of the buffer that earns nothing, so the figure is what a holder gets.
 export function netApy(v?: VaultState): number | undefined {
   if (!v) return undefined;

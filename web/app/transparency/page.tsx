@@ -7,7 +7,7 @@ import { card } from '@/components/ui';
 import { ETHEREUM, WHITECHAIN } from '@/lib/deployments';
 import { ethAddress, ethTx, wcAddress, wcTx } from '@/lib/chains';
 import { ago, fmt, short, usd } from '@/lib/format';
-import { useActivity, useBook, useVault } from '@/lib/protocol';
+import { precisePrice, useActivity, useBook, useVault } from '@/lib/protocol';
 
 export default function TransparencyPage() {
   const { vault, totalSent, totalReturned, config } = useVault();
@@ -32,7 +32,7 @@ export default function TransparencyPage() {
           <Column title="Whitechain · agUSD vault" logo="/whitechain.svg">
             <Line k="Total assets" v={usd(vault?.totalAssets)} />
             <Line k="Supply" v={`${fmt(vault?.totalSupply, 2)} agUSD`} />
-            <Line k="Share price" v={vault ? (Number(vault.sharePrice) / 1e6).toFixed(6) : '-'} />
+            <Line k="Share price" v={vault ? (precisePrice(vault) ?? 1).toFixed(8) : '-'} />
             <Line k="Idle, in the vault" v={usd(vault?.idle)} />
             <Line k="Owed to the queue" v={usd(vault?.pending)} />
             <Line k="Deployed, as last marked" v={usd(vault?.deployed)} />

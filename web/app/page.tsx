@@ -14,7 +14,7 @@ import { Route } from '@/components/Route';
 import { CreditVaults } from '@/components/CreditVaults';
 import { WhitechainBand } from '@/components/WhitechainBand';
 import { DASH, fmt, parse, raw, usd } from '@/lib/format';
-import { netApy, useActions, useActivity, useBook, useUser, useVault } from '@/lib/protocol';
+import { netApy, precisePrice, useActions, useActivity, useBook, useUser, useVault } from '@/lib/protocol';
 
 type Side = 'deposit' | 'withdraw';
 
@@ -37,7 +37,7 @@ export default function EarnPage() {
       : undefined;
 
   const price = vault?.sharePrice ?? 1_000_000n;
-  const sp = Number(price) / 1e6;
+  const sp = precisePrice(vault) ?? Number(price) / 1e6;
   const apyPct = netApy(vault);
   const apy = apyPct === undefined ? DASH : `${apyPct.toFixed(2)}%`;
 
@@ -121,7 +121,7 @@ export default function EarnPage() {
         <div className="mt-7 flex flex-wrap gap-8">
           <Stat label="Net APY" value={apy} sub="Target, after fee and buffer" />
           <Stat label="Vault assets" value={usd(vault?.totalAssets, 0)} sub="USDC backing agUSD" />
-          <Stat label="agUSD price" value={sp.toFixed(6)} sub="In USDC, only rises with the book" />
+          <Stat label="agUSD price" value={sp.toFixed(8)} sub="In USDC, assets over supply, live" />
           <Stat label="On the book" value={usd(book?.offChain, 0)} sub="Funded off chain, ABF senior" />
         </div>
       </Hero>
