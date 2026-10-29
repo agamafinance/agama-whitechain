@@ -2,7 +2,7 @@
 // way Circle's attestation service does, and executes it through the contract named as its destinationCaller.
 import { decodeEventLog, keccak256, parseAbiItem, slice, type Hex, type PublicClient } from 'viem';
 import { AgamaL1ReceiverAbi, AttestedMessengerAbi, CrossChainAllocatorAbi } from '../../abi';
-import { attester, E, eth, W, wc } from './config';
+import { attester, E, eth, sendChecked, W, wc } from './config';
 import { load, save } from './state';
 
 const MessageSent = parseAbiItem('event MessageSent(bytes message)');
@@ -33,9 +33,7 @@ export async function relayAll(): Promise<number> {
   for (const m of out.messages) {
     const used = await eth.public.readContract({ address: E.messenger, abi: AttestedMessengerAbi, functionName: 'usedNonces', args: [nonceOf(m)] });
     if (used) continue;
-    const hash = await eth.wallet.writeContract({ address: E.receiver, abi: AgamaL1ReceiverAbi, functionName: 'relay', args: [m, await attest(m)] });
-    await eth.public.waitForTransactionReceipt({ hash });
-    console.log(`  relayed to Ethereum   ${hash}`);
+    await sendChecked(eth, { address: E.receiver, abi: AgamaL1ReceiverAbi, functionName: 'relay', args: [m, await attest(m)] }, 'relayed to Ethereum');
     done++;
   }
 
@@ -44,9 +42,7 @@ export async function relayAll(): Promise<number> {
   for (const m of back.messages) {
     const used = await wc.public.readContract({ address: W.messenger, abi: AttestedMessengerAbi, functionName: 'usedNonces', args: [nonceOf(m)] });
     if (used) continue;
-    const hash = await wc.wallet.writeContract({ address: W.allocator, abi: CrossChainAllocatorAbi, functionName: 'settleReturn', args: [m, await attest(m)] });
-    await wc.public.waitForTransactionReceipt({ hash });
-    console.log(`  settled on Whitechain ${hash}`);
+    await sendChecked(wc, { address: W.allocator, abi: CrossChainAllocatorAbi, functionName: 'settleReturn', args: [m, await attest(m)] }, 'settled on Whitechain');
     done++;
   }
 

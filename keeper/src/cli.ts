@@ -1,7 +1,7 @@
 // bun src/cli.ts <status|tick|relay|allocate <usdc>|home <usdc>>
 import { formatUnits, parseUnits } from 'viem';
 import { AbfAssetIssuerAbi, CrossChainAllocatorAbi } from '../../abi';
-import { E, eth, W, wc } from './config';
+import { E, eth, sendChecked, W, wc } from './config';
 import { relayAll } from './relay';
 import { bringHome, runBook } from './book';
 import { navOfBook, rebalance, refill, report, settleQueue, shortfall, snapshot } from './vault';
@@ -48,9 +48,7 @@ const run: Record<string, () => Promise<unknown>> = {
   tick,
   relay: relayAll,
   allocate: async () => {
-    const hash = await wc.wallet.writeContract({ address: W.allocator, abi: CrossChainAllocatorAbi, functionName: 'allocate', args: [parseUnits(arg, 6)] });
-    await wc.public.waitForTransactionReceipt({ hash });
-    console.log(`  allocate ${hash}`);
+    await sendChecked(wc, { address: W.allocator, abi: CrossChainAllocatorAbi, functionName: 'allocate', args: [parseUnits(arg, 6)] });
     await relayAll();
   },
   home: async () => {

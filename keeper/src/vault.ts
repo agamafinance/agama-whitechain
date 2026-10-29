@@ -1,14 +1,10 @@
 // The Whitechain side: rebalance the buffer, mark the vault to the L1 position, and settle the queue.
 import type { Hex } from 'viem';
 import { AgamaL1ReceiverAbi, AgUSDAbi, CrossChainAllocatorAbi } from '../../abi';
-import { BUFFER, E, eth, W, wc } from './config';
+import { BUFFER, E, eth, sendChecked, W, wc } from './config';
 
-async function send(address: Hex, abi: any, functionName: string, args: unknown[]) {
-  const hash = await wc.wallet.writeContract({ address, abi, functionName, args } as any);
-  await wc.public.waitForTransactionReceipt({ hash });
-  console.log(`  ${functionName.padEnd(18)} ${hash}`);
-  return hash;
-}
+const send = (address: Hex, abi: any, functionName: string, args: unknown[]) =>
+  sendChecked(wc, { address, abi, functionName, args });
 
 export const snapshot = () => wc.public.readContract({ address: W.agUSD, abi: AgUSDAbi, functionName: 'snapshot' });
 
