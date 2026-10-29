@@ -1,0 +1,8 @@
+contracts/lib
+contracts/out
+contracts/cache
+contracts/broadcast
+keeper/node_modules
+web/node_modules
+web/.next
+**/.env
