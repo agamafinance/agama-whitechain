@@ -6,6 +6,7 @@ import { ReactNode, useState } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
 import { whitechainSepolia } from '@/lib/chains';
+import { ToastProvider } from '@/components/Toasts';
 
 import '@rainbow-me/rainbowkit/styles.css';
 
@@ -28,7 +29,7 @@ export function Providers({ children }: { children: ReactNode }) {
           })}
           initialChain={whitechainSepolia}
         >
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
