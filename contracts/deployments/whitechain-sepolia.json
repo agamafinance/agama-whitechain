@@ -1,0 +1,11 @@
+{
+  "admin": "0x4Ae5478e01cb01eb26C14c7011F283A13e6631Be",
+  "agUSD": "0x4F78D5Ba2242F77CfD75b7B2a1BD8EEf82DA67d8",
+  "allocator": "0x04477d606b751A7CBC6De478c749d0ffC726416f",
+  "attester": "0xcD29C4ECbe02b8b289FfB292fb9f03b2D8dEF758",
+  "chainId": 1874,
+  "deployedAtBlock": 11680057,
+  "domain": 1874,
+  "messenger": "0x6436CAC378FA46b2Cd4ff455Ff0fd07E99eb699b",
+  "usdc": "0x5b00EAc2E4359b818314E7F42c2805e29d587658"
+}
