@@ -10,6 +10,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title agUSD
 /// @notice A synthetic dollar that earns. Deposit USDC, hold agUSD, and the private credit yield lands in the price
@@ -236,7 +237,8 @@ contract AgUSD is ERC4626, ERC20Permit, AccessControl, Pausable, ReentrancyGuard
         _burn(owner, shares);
         pendingRedemptions += assets;
         id = nextRedemptionId++;
-        redemptions[id] = Redemption(receiver, uint64(block.timestamp), uint128(assets));
+        redemptions[id] =
+            Redemption({receiver: receiver, requestedAt: uint64(block.timestamp), assets: SafeCast.toUint128(assets)});
         emit RedeemRequested(id, owner, receiver, shares, assets);
 
         _settle(AUTO_SETTLE);
