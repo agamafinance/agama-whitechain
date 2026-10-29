@@ -31,8 +31,12 @@ export const ethTx = (h: string) => `${ETH_EXPLORER}/tx/${h}`;
 /// because a single free one going quiet would blank half the transparency page.
 export const l1 = createPublicClient({
   chain: sepolia,
+  // Batched, so a multicall and a page of getLogs go out as one request each, and three endpoints deep so a
+  // rate limit on one is a slower answer rather than an empty page.
+  batch: { multicall: true },
   transport: fallback([
-    http('https://sepolia.rpc.thirdweb.com'),
-    http('https://eth-sepolia.api.onfinality.io/public'),
+    http('https://sepolia.rpc.thirdweb.com', { batch: true }),
+    http('https://eth-sepolia.api.onfinality.io/public', { batch: true }),
+    http('https://ethereum-sepolia-rpc.publicnode.com', { batch: true }),
   ]),
 });
