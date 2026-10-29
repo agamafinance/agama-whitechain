@@ -1,0 +1,40 @@
+# The keeper on a clock: relay both ways, run the simulated issuer's book, rebalance the buffer, mark the vault,
+# settle the queue. Testnet keys only, held as repository secrets.
+name: keeper
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keeper
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: keeper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      # Where each scan stopped, carried from run to run so a tick reads only the blocks it has not seen.
+      - uses: actions/cache/restore@v4
+        with:
+          path: keeper/state.json
+          key: keeper-state-${{ github.run_id }}
+          restore-keys: keeper-state-
+      - run: bun install --frozen-lockfile
+      - run: bun src/cli.ts tick
+        env:
+          DEPLOYER_KEY: ${{ secrets.DEPLOYER_KEY }}
+          ATTESTER_KEY: ${{ secrets.ATTESTER_KEY }}
+          SEPOLIA_RPC_URL: https://sepolia.rpc.thirdweb.com
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: keeper/state.json
+          key: keeper-state-${{ github.run_id }}
