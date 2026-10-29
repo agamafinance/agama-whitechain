@@ -258,6 +258,44 @@ export function useActivity() {
   });
 }
 
+const Deposit = parseAbiItem(
+  'event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)',
+);
+const Withdraw = parseAbiItem(
+  'event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)',
+);
+
+/// What this wallet has put in and taken out, from the vault's own ERC-4626 events and its queue. Earned is what it
+/// holds now plus what it took out, less what it put in. A transfer of agUSD between wallets is not a deposit, so a
+/// wallet that received its agUSD from somebody else reads as having earned all of it; the line under the figure
+/// says so rather than pretending the basis is known.
+export function useBasis() {
+  const { address } = useAccount();
+  const wc = usePublicClient({ chainId });
+  return useQuery({
+    queryKey: ['basis', address],
+    enabled: !!address && !!wc && WHITECHAIN.deployedAtBlock > 0n,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const head = await wc!.getBlockNumber();
+      const get = (event: any, args: any) =>
+        logsInChunks(
+          (f, t) => wc!.getLogs({ address: WHITECHAIN.agUSD, event, args, fromBlock: f, toBlock: t }),
+          WHITECHAIN.deployedAtBlock,
+          head,
+          WC_LOG_RANGE,
+        );
+      const [deps, wds, reqs] = await Promise.all([
+        get(Deposit, { owner: address }),
+        get(Withdraw, { owner: address }),
+        get(RedeemRequested, { owner: address }),
+      ]);
+      const sum = (ls: any[]) => ls.reduce((a: bigint, l: any) => a + (l.args.assets as bigint), 0n);
+      return { deposited: sum(deps), withdrawn: sum(wds), queued: sum(reqs), deposits: deps.length };
+    },
+  });
+}
+
 export type Request = { id: bigint; shares: bigint; assets: bigint; ts?: number; settled: boolean; tx: Hex };
 
 /// This wallet's queued exits, and which of them have been paid.
