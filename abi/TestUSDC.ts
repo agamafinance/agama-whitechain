@@ -861,5 +861,4 @@ export const TestUSDCAbi = [
       }
     ]
   }
-]
- as const;
+] as const;

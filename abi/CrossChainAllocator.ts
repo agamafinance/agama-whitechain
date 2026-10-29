@@ -579,5 +579,4 @@ export const CrossChainAllocatorAbi = [
     "name": "ZeroAmount",
     "inputs": []
   }
-]
- as const;
+] as const;

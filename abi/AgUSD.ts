@@ -2171,5 +2171,4 @@ export const AgUSDAbi = [
     "name": "ZeroAmount",
     "inputs": []
   }
-]
- as const;
+] as const;

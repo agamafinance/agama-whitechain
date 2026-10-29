@@ -1427,5 +1427,4 @@ export const AbfAssetIssuerAbi = [
       }
     ]
   }
-]
- as const;
+] as const;
