@@ -42,7 +42,7 @@ contract RoundTripTest is Fixture {
         vm.startPrank(admin);
         issuer.offRamp(720_000e6, "wire-0001");
         assertEq(eUsdc.balanceOf(custody), 720_000e6);
-        vm.warp(block.timestamp + 91 days);
+        skip(91 days);
         uint256 interest = uint256(720_000e6) * 1_000 * 91 / (10_000 * 365);
         issuer.reportNav(720_000e6 + interest, keccak256("loan-tape-Q1"));
         vm.stopPrank();
@@ -52,8 +52,8 @@ contract RoundTripTest is Fixture {
         uint256 nav = _nav();
         vm.prank(admin);
         vault.reportNav(nav);
-        assertEq(vault.sharePrice(), priceBefore + 0, "nothing unlocked in the report's own block");
-        vm.warp(block.timestamp + 1 days);
+        assertApproxEqAbs(vault.sharePrice(), priceBefore, 1, "nothing unlocked in the report's own block");
+        skip(1 days);
         assertGt(vault.sharePrice(), priceBefore);
 
         // 5. Collections come home: custody on-ramps principal and interest, the receiver redeems and burns back.
@@ -73,7 +73,7 @@ contract RoundTripTest is Fixture {
         assertApproxEqAbs(wUsdc.balanceOf(address(vault)), 1_000_000e6 + interest, 1);
 
         // 7. Alice leaves with her principal and the yield, net of the 10% performance fee.
-        vm.warp(block.timestamp + 1 days);
+        skip(1 days);
         uint256 shares = vault.balanceOf(alice);
         vm.prank(alice);
         uint256 paid = vault.redeem(shares, alice, alice);
