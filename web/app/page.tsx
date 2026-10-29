@@ -12,8 +12,9 @@ import { AmountBox, card, Hero, Panel, primaryBtn, Row, Segmented, Stat, Status,
 import { NavChart } from '@/components/NavChart';
 import { Route } from '@/components/Route';
 import { CreditVaults } from '@/components/CreditVaults';
+import { WhitechainBand } from '@/components/WhitechainBand';
 import { DASH, fmt, parse, raw, usd } from '@/lib/format';
-import { netApy, useActions, useBook, useUser, useVault } from '@/lib/protocol';
+import { netApy, useActions, useActivity, useBook, useUser, useVault } from '@/lib/protocol';
 
 type Side = 'deposit' | 'withdraw';
 
@@ -21,6 +22,7 @@ export default function EarnPage() {
   const { openConnectModal } = useConnectModal();
   const { vault, totalSent, totalReturned, error, isFetching, refetch } = useVault();
   const { data: book } = useBook();
+  const { data: activity } = useActivity();
   const user = useUser();
   const act = useActions();
 
@@ -133,6 +135,7 @@ export default function EarnPage() {
             failed={stalled ? (error as Error).message : null}
             retrying={isFetching}
             onRetry={() => refetch()}
+            marks={activity?.navs.map((n) => ({ ts: n.ts, price: Number(n.price) / 1e6 })).sort((a, b) => a.ts - b.ts)}
           />
 
           <div className={`${card} flex flex-col`}>
@@ -214,6 +217,8 @@ export default function EarnPage() {
         <Route vault={vault} book={book} inflight={inflight} />
 
         <CreditVaults deployed={vault?.deployed} />
+
+        <WhitechainBand />
       </Panel>
     </>
   );

@@ -60,8 +60,8 @@ function drift(days: number): number {
 /// which is what the same chart does on any vault dashboard.
 const ACCRUAL = DAY;
 
-type Range = '1M' | '3M' | 'YTD' | '1Y';
-const RANGES: Range[] = ['1M', '3M', 'YTD', '1Y'];
+type Range = 'LIVE' | '1M' | '3M' | 'YTD' | '1Y';
+const RANGES: Range[] = ['LIVE', '1M', '3M', 'YTD', '1Y'];
 
 function niceNum(range: number, round: boolean): number {
   const exp = Math.floor(Math.log10(range || 1));
@@ -82,10 +82,12 @@ function niceTicks(min: number, max: number, count = 5) {
   const hi = Math.ceil(max / step) * step;
   const ticks: number[] = [];
   for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Number(v.toFixed(10)));
-  const dp = Math.max(2, Math.min(6, -Math.floor(Math.log10(step)) + 1));
+  const dp = Math.max(2, Math.min(8, -Math.floor(Math.log10(step)) + 1));
   return { ticks, lo, hi, dp };
 }
 
+const fmtTime = (ts: number) =>
+  new Date(ts * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const fmtDay = (ts: number) =>
   new Date(ts * 1000).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 const fmtFull = (ts: number) =>
@@ -111,7 +113,10 @@ export function NavChart({
   failed,
   retrying,
   onRetry,
+  marks,
 }: {
+  /** The marks the vault recorded on chain, oldest first. The LIVE range draws these and nothing else. */
+  marks?: { ts: number; price: number }[];
   /** Share price read on chain, in USDC per agUSD. The curve ends here. */
   price: number | undefined;
   /** Vault NAV, base units, for the line under the headline figure. */
@@ -124,6 +129,8 @@ export function NavChart({
   retrying?: boolean;
   onRetry?: () => void;
 }) {
+  // The modelled range by default: on a testnet a day of marks moves the price below its sixth decimal and LIVE
+  // draws a flat line. It is one click away, and it is the one to read once the book has run for a while.
   const [range, setRange] = useState<Range>('YTD');
   const [hover, setHover] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -134,6 +141,24 @@ export function NavChart({
   const series = useMemo(() => {
     if (price === undefined || apy === undefined) return null;
     const now = Math.floor(Date.now() / 1000);
+
+    // LIVE is measured, not modelled: every step is a NavReported the vault emitted, and the last point is the
+    // price read a moment ago, which differs from the last mark by whatever profit has unlocked since.
+    if (range === 'LIVE') {
+      const pts = (marks ?? []).filter((m) => m.ts > 0 && m.ts < now);
+      const start = pts.length ? pts[0].ts - 600 : now - 3600;
+      const times = [start, ...pts.map((m) => m.ts), now];
+      const raw = [pts.length ? pts[0].price : price, ...pts.map((m) => m.price), price];
+      // Drawn as steps: a share price sits still between marks and moves at them.
+      const t2: number[] = [];
+      const v2: number[] = [];
+      for (let i = 0; i < times.length; i++) {
+        if (i > 0) { t2.push(times[i]); v2.push(raw[i - 1]); }
+        t2.push(times[i]); v2.push(raw[i]);
+      }
+      return { vals: v2, times: t2, now, live: true as const, count: pts.length };
+    }
+
     const span = spanOf(range, now);
     const base = apy / 100;
 
@@ -167,8 +192,8 @@ export function NavChart({
       const i = Math.max(0, Math.min(growth.length - 1, Math.floor(t / ACCRUAL) - firstSlot));
       vals.push(price * Math.exp(growth[i] - end));
     }
-    return { vals, times, now };
-  }, [price, apy, range]);
+    return { vals, times, now, live: false as const, count: 0 };
+  }, [price, apy, range, marks]);
 
   if (!series) {
     // Holds the card's height while it waits, so the column does not collapse
@@ -201,7 +226,10 @@ export function NavChart({
 
   const { vals, times } = series;
   const { ticks, lo, hi, dp } = niceTicks(Math.min(...vals), Math.max(...vals), 5);
-  const xAt = (i: number) => L + (i / (vals.length - 1)) * (R - L);
+  const t0 = times[0];
+  const tN = times[times.length - 1];
+  const xAt = (i: number) =>
+    series.live ? L + ((times[i] - t0) / (tN - t0 || 1)) * (R - L) : L + (i / (vals.length - 1)) * (R - L);
   const yAt = (v: number) => B - ((v - lo) / (hi - lo || 1)) * (B - T);
 
   let line = `M ${xAt(0).toFixed(2)} ${yAt(vals[0]).toFixed(2)}`;
@@ -217,10 +245,11 @@ export function NavChart({
   const head = text.slice(0, text.length - 4);
   const dim = text.slice(text.length - 4);
 
-  const xIdx = [0, Math.round(last / 3), Math.round((2 * last) / 3), last];
+  // LIVE is spaced by time, so the middle labels of an index split can land on top of each other.
+  const xIdx = series.live ? [0, last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last];
   const xLabels = xIdx.map((i, k) => ({
     x: xAt(i),
-    text: fmtDay(times[i]),
+    text: series.live ? fmtTime(times[i]) : fmtDay(times[i]),
     anchor: (k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle') as 'start' | 'middle' | 'end',
   }));
 
@@ -268,7 +297,7 @@ export function NavChart({
             <span className="ml-2 text-[16px] font-medium text-fg-muted">USDC</span>
           </div>
           <span className="rounded-full bg-[#254839]/[0.08] px-2.5 py-1 text-[12px] font-medium text-fg tabular-nums">
-            +{change.toFixed(2)}% {range}
+            +{change.toFixed(series.live ? 4 : 2)}% {range === 'LIVE' ? 'since the first mark' : range}
           </span>
         </div>
         <div className="mt-2 text-[13px] text-fg-muted">
@@ -278,7 +307,7 @@ export function NavChart({
               {apy !== undefined ? ` · ${apy.toFixed(2)}% APY` : ''} · live
             </>
           ) : (
-            fmtFull(times[at])
+            series.live ? `${fmtFull(times[at])}, ${fmtTime(times[at])}` : fmtFull(times[at])
           )}
         </div>
       </div>
@@ -346,12 +375,20 @@ export function NavChart({
         <circle cx={xAt(at)} cy={yAt(vals[at])} r={3.5} fill={LINE} stroke="#fdfaf1" strokeWidth={1.5} />
       </svg>
 
+      {series.live ? (
+        <p className="mt-2 text-[12px] leading-snug text-fg-muted">
+          Measured. {series.count === 0
+            ? 'No mark has been recorded yet; the line is the price read on chain.'
+            : `Each step is one of the ${series.count} marks the vault recorded on Whitechain, and the right hand end is the price read a moment ago, which includes the profit unlocked since.`}
+        </p>
+      ) : (
       <p className="mt-2 text-[12px] leading-snug text-fg-muted">
         Testnet. The right hand end is the share price read on chain; the path to it is drawn
         around {apy !== undefined ? `${apy.toFixed(2)}%` : 'the vaults\u2019 rate'} a year rather
         than from recorded history, which on a testnet is a handful of deposits and draws a line no
         vault would produce.
       </p>
+      )}
     </div>
   );
 }
