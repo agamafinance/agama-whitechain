@@ -160,20 +160,28 @@ const BookMarked = parseAbiItem(
 );
 const Subscribed = parseAbiItem('event Subscribed(uint256 assets, uint256 shares)');
 
-/// getLogs over a range in chunks the public endpoints accept.
+/// getLogs over a range in the chunks the public endpoints accept, eight at a time. Whitechain's RPC caps a query
+/// at 10,000 blocks, which at one block a second is under three hours, so a week of history is sixty queries and
+/// reading them one after another is what makes a page sit on its loading line.
 async function logsInChunks<T>(
   fetch: (from: bigint, to: bigint) => Promise<T[]>,
   from: bigint,
   head: bigint,
   chunk: bigint,
 ): Promise<T[]> {
-  const out: T[] = [];
+  const ranges: [bigint, bigint][] = [];
   for (let start = from; start <= head; start += chunk) {
-    const end = start + chunk - 1n > head ? head : start + chunk - 1n;
-    out.push(...(await fetch(start, end)));
+    ranges.push([start, start + chunk - 1n > head ? head : start + chunk - 1n]);
+  }
+  const out: T[] = [];
+  for (let i = 0; i < ranges.length; i += 8) {
+    const batch = await Promise.all(ranges.slice(i, i + 8).map(([f, t]) => fetch(f, t)));
+    for (const logs of batch) out.push(...logs);
   }
   return out;
 }
+
+const WC_LOG_RANGE = 10_000n;
 
 export type Event = {
   chain: 'whitechain' | 'ethereum';
@@ -197,7 +205,7 @@ export function useActivity() {
       const wHead = await wc!.getBlockNumber();
       const eHead = await l1.getBlockNumber();
       const wLogs = (event: any, address: Address) =>
-        logsInChunks((f, t) => wc!.getLogs({ address, event, fromBlock: f, toBlock: t }), WHITECHAIN.deployedAtBlock, wHead, 50_000n);
+        logsInChunks((f, t) => wc!.getLogs({ address, event, fromBlock: f, toBlock: t }), WHITECHAIN.deployedAtBlock, wHead, WC_LOG_RANGE);
       const eLogs = (event: any, address: Address) =>
         logsInChunks((f, t) => l1.getLogs({ address, event, fromBlock: f, toBlock: t }), ETHEREUM.deployedAtBlock, eHead, 5_000n);
 
@@ -264,7 +272,7 @@ export function useRequests() {
         (f, t) => wc!.getLogs({ address: WHITECHAIN.agUSD, event: RedeemRequested, args: { owner: address }, fromBlock: f, toBlock: t }),
         WHITECHAIN.deployedAtBlock,
         head,
-        50_000n,
+        WC_LOG_RANGE,
       );
       const next = (await wc!.readContract({ address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'nextToSettle' })) as bigint;
       return logs
