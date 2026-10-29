@@ -1,0 +1,11 @@
+{
+  "admin": "0x4Ae5478e01cb01eb26C14c7011F283A13e6631Be",
+  "chainId": 11155111,
+  "custody": "0x4Ae5478e01cb01eb26C14c7011F283A13e6631Be",
+  "deployedAtBlock": 12019480,
+  "domain": 0,
+  "issuer": "0xe23f65c7159ffa68D6b7eeeEDF4FB275a68d4Acd",
+  "messenger": "0x1439F556A55DD3dc72b6b24a2Dd8B09dD080BF7F",
+  "receiver": "0xB398Ecc57D7842aB701310f868349f1f2E2D2746",
+  "usdc": "0x0A950Ec189d4470a527a142929cD9C395a91FFe6"
+}
