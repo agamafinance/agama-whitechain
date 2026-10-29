@@ -330,19 +330,34 @@ contract AgUSD is ERC4626, ERC20Permit, AccessControl, Pausable, ReentrancyGuard
         emit NavReported(previous, current, feeShares, totalAssets(), sharePrice());
     }
 
-    /// @dev The gain is already inside idle or deployed when this runs. The fee is taken as freshly minted shares
-    ///      priced before the gain, and the rest is locked to unlock linearly.
+    /// @dev The gain is already inside idle or deployed when this runs. Two things have to hold at once, and the
+    ///      lock and the fee shares are solved for together so that both do:
+    ///
+    ///        1. the price does not move in the report's block, so nobody can buy just before it and sell just after
+    ///        2. once everything locked has unlocked, the treasury's shares are worth exactly the fee
+    ///
+    ///      With V the vault fully vested, P its value before the gain, S the supply and F the fee:
+    ///        feeShares = S * F / (V - F)          (2)
+    ///        locked    = V - P * V / (V - F)      (1), given (2)
+    ///      Without a fee this is just locked += gain.
     function _recognizeGain(uint256 gain) private returns (uint256 feeShares) {
         uint256 fee = gain.mulDiv(config.performanceFeeBps, BPS);
-        lockedProfit = unvestedProfit() + (gain - fee);
+        address recipient = config.feeRecipient;
+        uint256 unvested = unvestedProfit();
         lockedAt = uint64(block.timestamp);
 
-        address recipient = config.feeRecipient;
-        if (fee > 0 && recipient != address(0)) {
-            uint256 before = totalAssets() - fee;
-            feeShares = fee.mulDiv(totalSupply() + 10 ** _decimalsOffset(), before + 1, Math.Rounding.Floor);
-            if (feeShares > 0) _mint(recipient, feeShares);
+        if (fee == 0 || recipient == address(0)) {
+            lockedProfit = unvested + gain;
+            return 0;
         }
+
+        uint256 gross = _idle() + deployedAssets;
+        uint256 vested = gross > pendingRedemptions ? gross - pendingRedemptions : 0;
+        uint256 before = vested > gain + unvested ? vested - gain - unvested : 0;
+
+        feeShares = fee.mulDiv(totalSupply() + 10 ** _decimalsOffset(), vested - fee, Math.Rounding.Floor);
+        lockedProfit = vested - before.mulDiv(vested, vested - fee, Math.Rounding.Ceil);
+        if (feeShares > 0) _mint(recipient, feeShares);
     }
 
     /// @dev A loss eats profit that has not unlocked yet before it reaches the price.
