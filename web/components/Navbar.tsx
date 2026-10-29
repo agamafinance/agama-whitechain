@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import { ConnectPill } from './ConnectPill';
+import { asset } from '@/lib/asset';
 
 const NAV = [
   { href: '/portfolio', label: 'Portfolio' },
@@ -39,7 +40,7 @@ export function Navbar() {
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/agama-logo-beige.svg" alt="Agama" className="h-[32.8px] w-auto" />
+            <img src={asset('/agama-logo-beige.svg')} alt="Agama" className="h-[32.8px] w-auto" />
           </Link>
 
           <nav className="hidden md:flex pill-bar items-center gap-1 rounded-full h-[47px] -mb-[3px] px-[3.5px] mr-auto ml-10">
@@ -56,7 +57,7 @@ export function Navbar() {
             >
               <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/whitechain.svg" alt="" className="h-[14px] w-[14px] object-contain" />
+                <img src={asset('/whitechain.svg')} alt="" className="h-[14px] w-[14px] object-contain" />
               </span>
               <span className="hidden sm:inline text-[13px]">Whitechain</span>
             </a>

@@ -6,6 +6,7 @@ import { Space_Grotesk } from 'next/font/google';
 import { ETHEREUM } from '@/lib/deployments';
 import { ethAddress } from '@/lib/chains';
 import { usd } from '@/lib/format';
+import { asset } from '@/lib/asset';
 
 const grotesk = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600'] });
 
@@ -44,7 +45,7 @@ export function CreditVaults({ deployed }: { deployed?: bigint }) {
         <span className="inline-flex items-center gap-1.5 text-[12px] text-fg-muted">
           curated by
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/abf-partner.svg" alt="" className="h-4 w-4" />
+          <img src={asset('/abf-partner.svg')} alt="" className="h-4 w-4" />
           <span className={`${grotesk.className} text-[13px] font-medium text-[#111318]`}>ABF partner</span>
         </span>
       </div>
@@ -67,7 +68,7 @@ export function CreditVaults({ deployed }: { deployed?: bigint }) {
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-[#254839]/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/abf-partner.svg" alt="" className="h-[22px] w-[22px] object-contain" />
+                <img src={asset('/abf-partner.svg')} alt="" className="h-[22px] w-[22px] object-contain" />
               </span>
               <div className="min-w-0">
                 <div className="text-[15px] text-fg font-medium leading-tight">{v.name}</div>

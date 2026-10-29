@@ -4,6 +4,7 @@
 // one amount box, so this app reads as the same product on a different chain.
 import { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { asset } from '@/lib/asset';
 
 export const card =
   'rounded-2xl bg-[#fdfaf1] p-6 shadow-[0_1px_3px_rgba(20,50,35,0.06),0_10px_30px_rgba(20,50,35,0.09)]';
@@ -19,7 +20,7 @@ export function Hero({ title, children, art }: { title: ReactNode; children: Rea
         {art && (
           <div aria-hidden className="pointer-events-none absolute right-0 -top-2 z-20 hidden lg:block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={art} alt="" className="h-[300px] w-auto" />
+            <img src={asset(art)} alt="" className="h-[300px] w-auto" />
           </div>
         )}
         <h1 className="mt-3 text-[34px] md:text-[44px] leading-[1.05] text-fg font-semibold">{title}</h1>

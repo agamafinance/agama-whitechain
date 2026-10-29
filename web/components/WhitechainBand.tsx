@@ -1,3 +1,5 @@
+import { asset } from '@/lib/asset';
+
 // Built on Whitechain: the four facts about the chain that matter to a dollar that earns, each one checked
 // against Whitechain's docs and the live RPC, not lifted from a deck.
 const FACTS = [
@@ -14,7 +16,7 @@ export function WhitechainBand() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/whitechain.svg" alt="" className="h-5 w-5" />
+            <img src={asset('/whitechain.svg')} alt="" className="h-5 w-5" />
           </span>
           <h2 className="text-[17px] font-semibold">Built on Whitechain</h2>
           <span className="text-[13px] text-[#fdf8ed]/65">The onchain economy layer, from WhiteBIT</span>

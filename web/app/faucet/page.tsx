@@ -8,6 +8,7 @@ import { fmt } from '@/lib/format';
 import { WBT_FAUCET, whitechainSepolia, wcAddress } from '@/lib/chains';
 import { WHITECHAIN } from '@/lib/deployments';
 import { useActions, useUser } from '@/lib/protocol';
+import { asset } from '@/lib/asset';
 
 const COOLDOWN = 3600;
 
@@ -55,7 +56,7 @@ export default function FaucetPage() {
           <div className={card}>
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logos/wbt.svg" alt="" className="h-9 w-9" />
+              <img src={asset('/logos/wbt.svg')} alt="" className="h-9 w-9" />
               <div>
                 <div className="text-[17px] font-semibold text-fg">WBT for gas</div>
                 <div className="text-[12px] text-fg-muted">0.5 WBT a day, sign in with GitHub</div>
@@ -74,7 +75,7 @@ export default function FaucetPage() {
           <div className={card}>
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logos/usdc.svg" alt="" className="h-9 w-9" />
+              <img src={asset('/logos/usdc.svg')} alt="" className="h-9 w-9" />
               <div>
                 <div className="text-[17px] font-semibold text-fg">Test USDC</div>
                 <div className="text-[12px] text-fg-muted">10,000 an hour, straight from the contract</div>

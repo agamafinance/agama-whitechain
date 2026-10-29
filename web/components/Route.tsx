@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import type { Book, VaultState } from '@/lib/protocol';
 import { usd } from '@/lib/format';
 import { card } from './ui';
+import { asset } from '@/lib/asset';
 
 type Stop = { chain: string; logo: string; title: string; what: string; value?: bigint; note: string };
 
@@ -66,7 +67,7 @@ export function Route({ vault, book, inflight }: { vault?: VaultState; book?: Bo
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-[#254839]/10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.logo} alt="" className="h-[18px] w-[18px] object-contain" />
+                  <img src={asset(s.logo)} alt="" className="h-[18px] w-[18px] object-contain" />
                 </span>
                 <span className="text-[11px] uppercase tracking-wider text-fg-muted">{s.chain}</span>
               </div>
