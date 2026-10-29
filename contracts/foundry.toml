@@ -13,6 +13,11 @@ optimizer_runs = 10_000
 via_ir = true
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
+[lint]
+# Immutables keep the names Circle's interfaces and OpenZeppelin's getters use, scripts read their own
+# deployment records, and a keccak over abi.encode is clearer than the assembly it would save.
+exclude_lints = ["screaming-snake-case-immutable", "unsafe-cheatcode", "asm-keccak256"]
+
 [fuzz]
 runs = 512
 

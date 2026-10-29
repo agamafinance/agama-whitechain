@@ -38,6 +38,7 @@ contract AbfAssetIssuerTest is Fixture {
         _subscribe(100e6);
         vm.prank(investor);
         vm.expectRevert(abi.encodeWithSelector(AbfAssetIssuer.NotAllowlisted.selector, bob));
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         issuer.transfer(bob, 1e6);
     }
 
