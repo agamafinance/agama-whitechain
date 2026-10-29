@@ -229,14 +229,17 @@ export function useActivity() {
         eLogs(BookMarked, ETHEREUM.issuer),
       ]);
 
-      // Block times, once per block, so every row can say when.
-      const stamp = async (client: any, blocks: bigint[]) => {
-        const uniq = [...new Set(blocks.map(String))].map(BigInt);
-        const got = await Promise.all(uniq.map((b) => client.getBlock({ blockNumber: b })));
-        return new Map(got.map((b: any) => [String(b.number), Number(b.timestamp)]));
-      };
-      const wTimes = await stamp(wc, [...navs, ...allocs, ...returns].map((l: any) => l.blockNumber));
-      const eTimes = await stamp(l1, [...subs, ...offs, ...ons, ...marks].map((l: any) => l.blockNumber));
+      // When each row happened, from one block per chain rather than one request per row. Whitechain is an OP
+      // Stack chain with a block exactly every second, so its times are exact; Sepolia slots are twelve seconds,
+      // missed slots aside, which is close enough for "4m ago". Fetching every block's header instead is what got
+      // the public Sepolia endpoint to answer 429 to a single page load.
+      const [wRef, eRef] = await Promise.all([wc!.getBlock({ blockNumber: wHead }), l1.getBlock({ blockNumber: eHead })]);
+      const timeOf = (ref: { number: bigint | null; timestamp: bigint }, secs: number) => (n: bigint) =>
+        Number(ref.timestamp) - Number((ref.number ?? 0n) - n) * secs;
+      const wAt = timeOf(wRef, 1);
+      const eAt = timeOf(eRef, 12);
+      const wTimes = { get: (b: string) => wAt(BigInt(b)) };
+      const eTimes = { get: (b: string) => eAt(BigInt(b)) };
 
       const row = (chain: Event['chain'], kind: string, l: any, amount: bigint, detail?: string): Event => ({
         chain,
