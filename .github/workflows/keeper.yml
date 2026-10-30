@@ -1,10 +1,14 @@
 # The keeper on a clock: relay both ways, run the simulated issuer's book, rebalance the buffer, mark the vault,
-# settle the queue. Testnet keys only, held as repository secrets.
+# settle the queue, every two minutes. Testnet keys only, held as repository secrets.
+#
+# GitHub starts scheduled runs late and irregularly (hours apart on this repo), so a run does not tick once: it
+# loops for just under six hours, and the hourly schedule only has to queue the next one before it ends. The
+# concurrency group holds that one in line, so there is never more than one keeper sending transactions.
 name: keeper
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -14,7 +18,7 @@ concurrency:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 360
     defaults:
       run:
         working-directory: keeper
@@ -28,11 +32,10 @@ jobs:
           key: keeper-state-${{ github.run_id }}
           restore-keys: keeper-state-
       - run: bun install --frozen-lockfile
-      - run: bun src/cli.ts tick
+      - run: bun src/cli.ts loop ${{ github.event_name == 'workflow_dispatch' && '30' || '345' }}
         env:
           DEPLOYER_KEY: ${{ secrets.DEPLOYER_KEY }}
           ATTESTER_KEY: ${{ secrets.ATTESTER_KEY }}
-          SEPOLIA_RPC_URL: https://sepolia.rpc.thirdweb.com
       - uses: actions/cache/save@v4
         if: always()
         with:

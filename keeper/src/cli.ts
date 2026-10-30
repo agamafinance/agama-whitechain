@@ -1,4 +1,4 @@
-// bun src/cli.ts <status|tick|relay|allocate <usdc>|home <usdc>>
+// bun src/cli.ts <status|tick|loop <minutes>|relay|allocate <usdc>|home <usdc>>
 import { formatUnits, parseUnits } from 'viem';
 import { AbfAssetIssuerAbi, CrossChainAllocatorAbi } from '../../abi';
 import { E, eth, sendChecked, W, wc } from './config';
@@ -26,9 +26,10 @@ ABF issuer on Ethereum Sepolia
 async function tick() {
   console.log('relay');
   await relayAll();
-  console.log('book');
-  await runBook();
+  // What the vault needs home is known before the book runs, so the book keeps it as cash instead of wiring it out.
   const short = (await shortfall()) + (await refill());
+  console.log('book');
+  await runBook(short);
   if (short > 0n) {
     console.log(`short ${usd(short)} for the queue and the buffer, bringing it home`);
     await bringHome(short);
@@ -42,10 +43,35 @@ async function tick() {
   await status();
 }
 
+/// Ticks every two minutes for `minutes`. GitHub runs a scheduled workflow hours late when it runs it at all, so
+/// the clock lives here and the schedule only has to start a run before the last one ends. A tick that fails is
+/// logged and retried on the next one, since a public endpoint failing once is weather; failing several times in
+/// a row is an outage, and that ends the run in error so somebody is told.
+async function loop() {
+  const until = Date.now() + Number(arg ?? 350) * 60_000;
+  const EVERY = 120_000;
+  const GIVE_UP = 4;
+  let failedInARow = 0;
+  while (Date.now() < until) {
+    const started = Date.now();
+    console.log(`\n== tick ${new Date(started).toISOString()}`);
+    try {
+      await tick();
+      failedInARow = 0;
+    } catch (e) {
+      failedInARow++;
+      console.log(`::warning::tick failed (${failedInARow} in a row): ${(e as Error).message.split('\n')[0]}`);
+      if (failedInARow >= GIVE_UP) throw e;
+    }
+    await Bun.sleep(Math.max(0, Math.min(EVERY - (Date.now() - started), until - Date.now())));
+  }
+}
+
 const [cmd, arg] = process.argv.slice(2);
 const run: Record<string, () => Promise<unknown>> = {
   status,
   tick,
+  loop,
   relay: relayAll,
   allocate: async () => {
     await sendChecked(wc, { address: W.allocator, abi: CrossChainAllocatorAbi, functionName: 'allocate', args: [parseUnits(arg, 6)] });
@@ -57,7 +83,7 @@ const run: Record<string, () => Promise<unknown>> = {
   },
 };
 if (!run[cmd]) {
-  console.error('usage: bun src/cli.ts <status|tick|relay|allocate <usdc>|home <usdc>>');
+  console.error('usage: bun src/cli.ts <status|tick|loop <minutes>|relay|allocate <usdc>|home <usdc>>');
   process.exit(1);
 }
 await run[cmd]();
