@@ -26,7 +26,9 @@ function loanTape(book: bigint, at: number) {
   });
 }
 
-export async function runBook() {
+/// Runs the book. `keep` is cash the vault is about to call home: it stays at the issuer rather than being wired
+/// to custody and on-ramped straight back in the same tick.
+export async function runBook(keep = 0n) {
   const [cash, offChain, navAt, capBps] = await Promise.all([
     read<bigint>('cash'),
     read<bigint>('offChainAssets'),
@@ -36,8 +38,9 @@ export async function runBook() {
   let book = offChain;
   const now = BigInt(Math.floor(Date.now() / 1000));
 
-  // 1. Accrue what the book earned since it was last marked.
-  if (offChain > 0n && navAt > 0n && now > navAt) {
+  // 1. Accrue what the book earned since it was last marked, at most as often as the vault is marked: the keeper
+  //    ticks every two minutes, and a book an administrator re-marked that often would be noise, not reporting.
+  if (offChain > 0n && navAt > 0n && now >= navAt + BOOK.markEverySec) {
     const accrued = (offChain * BigInt(BOOK.aprBps) * (now - navAt)) / (10_000n * YEAR);
     if (accrued > 0n) {
       book = offChain + accrued;
@@ -49,8 +52,9 @@ export async function runBook() {
   //    marked above. Not re-read: a public endpoint can answer a read straight after a write from a node that has
   //    not seen it, and a wire sized off the old mark overshoots the cap the contract checks against the new one.
   const cap = ((cash + book) * BigInt(capBps)) / 10_000n;
-  const wire = cap > book ? cap - book : 0n;
-  void BOOK.cashBps;
+  const room = cap > book ? cap - book : 0n;
+  const spare = cash > keep ? cash - keep : 0n;
+  const wire = room < spare ? room : spare;
   if (wire > 1_000_000n) {
     await send(E.issuer, AbfAssetIssuerAbi, 'offRamp', [wire, ref('wire')]);
     if (navAt === 0n || offChain === 0n) {
