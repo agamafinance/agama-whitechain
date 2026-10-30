@@ -7,6 +7,11 @@ import { load, save } from './state';
 
 const MessageSent = parseAbiItem('event MessageSent(bytes message)');
 
+// The widest getLogs range each side's public endpoints answer: Whitechain's caps at 10,000 blocks, and the
+// Sepolia ones at 1,000 (thirdweb lowered its cap from 2,000 without notice, which stalled every tick).
+const WC_LOG_RANGE = 10_000;
+const ETH_LOG_RANGE = 1_000;
+
 async function scan(client: PublicClient, address: Hex, from: number, chunk: number) {
   const head = Number(await client.getBlockNumber());
   const messages: Hex[] = [];
@@ -29,16 +34,19 @@ export async function relayAll(): Promise<number> {
   let done = 0;
 
   // Whitechain to Ethereum: allocations, executed by the receiver, which subscribes them.
-  const out = await scan(wc.public as PublicClient, W.messenger, state.wcBlock, 10_000); // Whitechain's RPC cap
+  const out = await scan(wc.public as PublicClient, W.messenger, state.wcBlock, WC_LOG_RANGE);
   for (const m of out.messages) {
     const used = await eth.public.readContract({ address: E.messenger, abi: AttestedMessengerAbi, functionName: 'usedNonces', args: [nonceOf(m)] });
     if (used) continue;
     await sendChecked(eth, { address: E.receiver, abi: AgamaL1ReceiverAbi, functionName: 'relay', args: [m, await attest(m)] }, 'relayed to Ethereum');
     done++;
   }
+  // Each side's progress is kept as soon as it is read, so a failure on the other side does not rescan it.
+  // Rewind a little so a log the RPC had not indexed yet is read next time; nonces make that idempotent.
+  save({ ...state, wcBlock: Math.max(out.head - 300, state.wcBlock) });
 
   // Ethereum to Whitechain: returns, settled by the allocator into the vault.
-  const back = await scan(eth.public as PublicClient, E.messenger, state.ethBlock, 2_000);
+  const back = await scan(eth.public as PublicClient, E.messenger, state.ethBlock, ETH_LOG_RANGE);
   for (const m of back.messages) {
     const used = await wc.public.readContract({ address: W.messenger, abi: AttestedMessengerAbi, functionName: 'usedNonces', args: [nonceOf(m)] });
     if (used) continue;
@@ -46,7 +54,6 @@ export async function relayAll(): Promise<number> {
     done++;
   }
 
-  // Rewind a little on each side so a log the RPC had not indexed yet is read next time; nonces make it idempotent.
-  save({ wcBlock: Math.max(out.head - 300, state.wcBlock), ethBlock: Math.max(back.head - 20, state.ethBlock) });
+  save({ ...load(), ethBlock: Math.max(back.head - 20, state.ethBlock) });
   return done;
 }
