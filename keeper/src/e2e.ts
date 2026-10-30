@@ -54,10 +54,16 @@ try {
   check(true, 'a second drip inside the hour is refused');
 }
 
-// 3. Deposit 5,000 at the live price.
+// 3. Deposit the whole drip at the live price. The queued exit in step 6 needs the holder's stake to be more than
+// the buffer, which is a fifth of the vault, so the stake is sized against the vault rather than fixed: with
+// 5,000 into a vault that had grown past 20,000, the buffer covered the "queued" exit and it was paid on the spot.
 console.log('3. deposit');
 const s0 = await snapshot();
-const amount = parseUnits('5000', 6);
+const amount = parseUnits('10000', 6);
+if ((s0.totalAssets + amount) / 5n >= amount - parseUnits('250', 6)) {
+  console.log(`  the vault holds ${usd(s0.totalAssets)}; a 10,000 stake would fit in its buffer, so step 6 cannot queue`);
+  process.exit(1);
+}
 const preview = await read<bigint>('previewDeposit', [amount]);
 await as('approve', [W.agUSD, amount], W.usdc, TestUSDCAbi);
 await as('deposit', [amount, holder.address]);
