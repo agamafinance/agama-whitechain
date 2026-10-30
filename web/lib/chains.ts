@@ -27,16 +27,17 @@ export const wcTx = (h: string) => `${WC_EXPLORER}/tx/${h}`;
 export const ethAddress = (a: string) => `${ETH_EXPLORER}/address/${a}`;
 export const ethTx = (h: string) => `${ETH_EXPLORER}/tx/${h}`;
 
-/// Ethereum is only ever read: nobody signs on the L1 from this app, the keeper does. Two public endpoints,
+/// Ethereum is only ever read: nobody signs on the L1 from this app, the keeper does. Several public endpoints,
 /// because a single free one going quiet would blank half the transparency page.
 export const l1 = createPublicClient({
   chain: sepolia,
   // Batched, so a multicall and a page of getLogs go out as one request each, and three endpoints deep so a
-  // rate limit on one is a slower answer rather than an empty page.
+  // rate limit on one is a slower answer rather than an empty page. thirdweb goes last: it caps getLogs at 1,000
+  // blocks, under the 5,000 the activity feed reads at once, so first in line it failed every log request.
   batch: { multicall: true },
   transport: fallback([
-    http('https://sepolia.rpc.thirdweb.com', { batch: true }),
-    http('https://eth-sepolia.api.onfinality.io/public', { batch: true }),
     http('https://ethereum-sepolia-rpc.publicnode.com', { batch: true }),
+    http('https://eth-sepolia.api.onfinality.io/public', { batch: true }),
+    http('https://sepolia.rpc.thirdweb.com', { batch: true }),
   ]),
 });
