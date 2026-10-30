@@ -144,17 +144,18 @@ The chart has two views. LIVE draws only the marks the vault has recorded on cha
 
 ## The keeper
 
-[`.github/workflows/keeper.yml`](.github/workflows/keeper.yml) runs `bun src/cli.ts tick` every fifteen minutes. Each tick does the following:
+[`.github/workflows/keeper.yml`](.github/workflows/keeper.yml) runs `bun src/cli.ts loop`, which ticks every two minutes for just under six hours. An hourly schedule queues the next run behind it. GitHub starts scheduled workflows hours late on this repo, so one tick per scheduled run would have left a queued exit waiting half a day. A tick that fails is retried on the next one. Four failures in a row end the run in error, and GitHub emails about it. Each tick does the following:
 
 1. relays any messages waiting in either direction
-2. runs the simulated issuer's book: accrue, mark against a loan tape, wire the excess to custody
-3. refills the vault's buffer from the book when it falls under 10%, and allocates the excess when it rises above 30%
-4. marks the vault, counting legs still in flight
-5. settles the queue
+2. works out what the vault needs home for the queue and the buffer, before the book runs
+3. runs the simulated issuer's book: accrue and mark against a loan tape every ten minutes, then wire to custody what the cap allows, keeping back the cash the vault is about to call
+4. refills the vault's buffer from the book when it falls under 10%, and allocates the excess when it rises above 30%
+5. marks the vault, counting legs still in flight
+6. settles the queue
 
 The keys are testnet keys, stored as repository secrets.
 
-[`docs/E2E.md`](docs/E2E.md) is a live run with a holder who is not the deployer: faucet, deposit, instant exit, a queued exit above the buffer, and the keeper paying it from Ethereum. Running it found three keeper bugs, and the document records them.
+[`docs/E2E.md`](docs/E2E.md) is a live run with a holder who is not the deployer: faucet, deposit, instant exit, a queued exit above the buffer, and the keeper paying it from Ethereum. Running it, and running the keeper live, found five keeper bugs, and the document records them.
 
 ## Live on testnet
 
