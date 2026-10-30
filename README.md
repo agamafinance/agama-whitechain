@@ -127,7 +127,7 @@ These facts come from [docs.whitechain.io](https://docs.whitechain.io) and were 
 
 ## The app
 
-[agama-whitechain.vercel.app](https://agama-whitechain.vercel.app). It is a Next 16 app built with wagmi and RainbowKit, and it uses the same design system as app.agama.finance/stellar. Every figure on it is read from one of the two chains.
+[app.agama.finance/whitechain](https://app.agama.finance/whitechain), served by the main app's rewrite to the `agama-whitechain` project in the Agama Vercel team. It is a Next 16 app built with wagmi and RainbowKit, and it uses the same design system as app.agama.finance/stellar. Every figure on it is read from one of the two chains.
 
 | Page | What it shows |
 | --- | --- |
