@@ -149,7 +149,7 @@ The chart has two views. LIVE draws only the marks the vault has recorded on cha
 1. relays any messages waiting in either direction
 2. works out what the vault needs home for the queue and the buffer, before the book runs
 3. runs the simulated issuer's book: accrue and mark against a loan tape every ten minutes, then wire to custody what the cap allows, keeping back the cash the vault is about to call
-4. refills the vault's buffer from the book when it falls under 10%, and allocates the excess when it rises above 30%
+4. sends everything above the vault's 10% reserve floor to the book: allocate, relay and wire to custody, all in the same tick. It brings cash home when the buffer falls under 5%
 5. marks the vault, counting legs still in flight
 6. settles the queue
 

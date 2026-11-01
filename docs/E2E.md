@@ -15,46 +15,55 @@ Then the keeper ran on its own for a day, and failed every scheduled tick from t
 - **A node a block behind refused transactions that were valid.** Public endpoints are load balanced. A redeem was simulated before the on-ramp it depended on, and a wire before the subscription that funded it, and both came back as reverts. A send whose simulation reverts is now retried a block later, up to four times. Nothing is broadcast on a simulated revert, so a retry cannot send twice.
 - **GitHub ran the fifteen minute schedule every three to seven hours.** A run now loops for just under six hours with a tick every two minutes. The hourly schedule only has to queue the next run.
 
+Then the policy changed so that everything is reinvested as soon as possible. Running that live found two more problems:
+
+- **An allocation sized to the reserve floor exactly was refused by seven micro-dollars.** Profit unlocks by the second, so the floor rises between the read and the block. The keeper now keeps a cent, or a basis point of the vault, above it.
+- **A receipt that never came froze a run for forty minutes.** An endpoint accepted a transaction and never passed it on, so nothing was pending on chain, and the wait for its receipt had no limit. Waits are now capped at three minutes; the tick fails and the next one starts again.
+
 The e2e itself also had a sizing bug. With 5,000 deposited into a vault that had grown past 20,000, the buffer covered the "queued" exit and paid it on the spot. It now deposits the whole drip, and stops before starting if the vault is large enough that the exit would still not queue.
 
-## The passing run, 30 October 2026
+## The passing run, 1 November 2026
 
 ```
-holder 0x051150e806C32333D64303E2aafa09A79bf51EcD
+holder 0x0d97859903d70337c0a4F83c3de117DC8B6aF0E3
 1. gas
-  ok   0.01 WBT https://explorer.testnet.whitechain.io/tx/0xd5ce80a195080681d23fba5afed2731a598ee327a9e6bba9389835bbbb66343e
+  ok   0.01 WBT https://explorer.testnet.whitechain.io/tx/0x6b76b2c76d07f740500ca2f16c9b276cc554bb4dbdd92b3abe5798054feddcf7
 2. faucet
-  ok   faucet https://explorer.testnet.whitechain.io/tx/0x4652803665f4d8c1823a80e7ba0166880033258e61f1e4c21fcd661c8e8cfbc7
+  ok   drip https://explorer.testnet.whitechain.io/tx/0x3c5f6ea99dc4a67c5a34fbe01cf9414455c2106324061191f5113b36046a5d8d
   ok   10,000 USDC arrived
-  ok   a second drip inside the hour is refused
+  ok   drip https://explorer.testnet.whitechain.io/tx/0x16a3b02a8af85841bbec57bbf87cf3825213e427536ae3bc18771351a8fddd49
+  ok   a second drip straight after is paid too
 3. deposit
-  ok   approve https://explorer.testnet.whitechain.io/tx/0x29e47244731eef0b4eab1c1edbebe2540be4dcf58561c373db99ea9fa0e23ee7
-  ok   deposit https://explorer.testnet.whitechain.io/tx/0xf2576306871264a60b465c29209223a884631e7475ed69f79b0c9ec7d6cbe75b
-  ok   minted 9999.911939 agUSD, the preview less what unlocked meanwhile
-  ok   vault assets $19500.542225 -> $29500.542885
+  ok   approve https://explorer.testnet.whitechain.io/tx/0x56cc4c35e9b2e514e3572e68c2e5a659aaf73d87bb3a1fea3aaad5a5536044bd
+  ok   deposit https://explorer.testnet.whitechain.io/tx/0xc5bdf0b0a97295f7efa5e2892bfcbb7c5d37a29ca716b448c2adea6dc8924c5e
+  ok   minted 9995.444061 agUSD, the preview less what unlocked meanwhile
+  ok   vault assets $41109.892014 -> $51109.892213
   ok   a deposit does not lower the price
 4. instant exit
-  ok   maxRedeem 9999.911939 reports the buffer
-  ok   redeem https://explorer.testnet.whitechain.io/tx/0x1c7f91c5db86e42e7a9b49c16899f12bee56b05936de802d74748350ae12d3cb
-  ok   received $250.002204, the preview or a hair more
+  ok   maxRedeem 9995.444061 reports the buffer
+  ok   redeem https://explorer.testnet.whitechain.io/tx/0xbb8ebb404fa2a1283fd19be77383b1b551e831bd341b3393ea161dc3a4f63441
+  ok   received $250.11395, the preview or a hair more
 5. keeper: allocate, relay, run the book, mark
-  allocate           0xac362e9d2c88c48fb7b6c4a5737b692dd0440d623df3479c18f9dc2ad582b4af
-  ok   the buffer above 30% was allocated
-  relayed to Ethereum 0x389fecb4b83012eb3da053219467829ca9cfabf773ca4ccca1df63662e9facb0
-  offRamp            0xfd119a64b0d773698a3c3de7ece380fff69d9b65cd32499de9e3245319124158
-  ok   buffer back near 20%: $5850.108235 of $29250.544477
-  ok   price 1.000008 -> 1.000008
+  allocate           0x09b200b7b14d74003f19e7fc7a609363e9b9da6b1d05a597c383dd36c78c47e2
+  ok   everything above the reserve floor was allocated
+  relayed to Ethereum 0x14ade0d1a70fa17e443680bc3893e6b1114e1dc83ddf25b14762eff8bd4d0dc4
+  offRamp            0xe0c65472004ceff9f81c150ae54b210b388b38154d8a4d9b4e1e164e41ea87d7
+  reportNav          0xcc0b3d87501a584d26bcb4e2c3c4fa104d9899b4df5906f015d9532896b108d3
+  ok   buffer down to the 10% floor: $5091.063816 of $50859.793094
+  ok   the L1 receiver subscribed it: position $36995.674804 -> $45769.586352
+  ok   the issuer wired it to custody: book $33296.107324 -> $41192.627717
+  ok   price 1.000455 -> 1.000455
 6. queued exit
-  ok   holding 9749.911939 agUSD, only 5850.055959 instant
-  ok   requestRedeem https://explorer.testnet.whitechain.io/tx/0x399f30343211ad903a6f4f2d8df9be30e15c5f15061c39c342017cc407219129
+  ok   holding 9745.444061 agUSD, only 5088.744251 instant
+  ok   requestRedeem https://explorer.testnet.whitechain.io/tx/0x32553d44ce48488030dc7916f2828080495c744090359a0d30738c3fc25d0ab3
   ok   shares burned at request
-  ok   queue owes $9749.999227, at least the $9749.999062 previewed
+  ok   queue owes $9749.88627, at least the $9749.886254 previewed
 7. keeper: collections home over the messenger, settle the queue
-  ok   short $3899.890992 on Whitechain
-  onRamp             0xc76a07283b12b557896f098dd3e1f07a5e196b6dc083747875dd7770b56f5737
-  redeemAndSendHome  0x44cd57b47dabdff220308fd8fb711f0824ca4eb0ad323542e83bdb5cae7442f5
-  settled on Whitechain 0xd4d95cc733f4848e08fa3441acdc0f0f401619ec2840aa54b08aa71212726a66
-  ok   holder paid $9749.999227, exactly what the request fixed
+  ok   short $4658.822454 on Whitechain
+  onRamp             0x61418f56e18fcd5c0a3f80e1a407c9a739bf2539fa4d976dcc45f758dc18ef10
+  redeemAndSendHome  0x0afadaef06f5c0abf9f151e74271211761d243ab950acf7dbc0967e6b213fa6c
+  settled on Whitechain 0xee3162ba142d3bd7be46cdf1e4464de4e1d733fa90a6a44ec4515fb2c1178921
+  ok   holder paid $9749.88627, exactly what the request fixed
   ok   queue empty
 ALL CHECKS PASSED
 ```
