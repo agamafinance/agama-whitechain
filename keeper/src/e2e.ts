@@ -4,11 +4,13 @@
 // USDC, deposits, leaves instantly within the buffer, then asks for more than the buffer holds. The keeper has to
 // bring cash home from the issuer on Ethereum over the messenger to pay it. Every step asserts what it expects
 // and prints the transaction it rests on, so a run is evidence and not a log.
+import { appendFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { formatUnits, parseEther, parseUnits, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, http } from 'viem';
-import { AgUSDAbi, TestUSDCAbi, UsdcFaucetAbi } from '../../abi';
-import { W, wc } from './config';
+import { AbfAssetIssuerAbi, AgamaL1ReceiverAbi, AgUSDAbi, TestUSDCAbi, UsdcFaucetAbi } from '../../abi';
+import { E, eth, W, wc } from './config';
 import { relayAll } from './relay';
 import { bringHome, runBook } from './book';
 import { rebalance, report, settleQueue, shortfall, snapshot } from './vault';
@@ -22,8 +24,11 @@ function check(ok: boolean, what: string) {
   if (!ok) failures++;
 }
 
+// The holder's key is written down before anything is sent to it, so a run that dies halfway leaves funds a
+// person can still withdraw rather than a balance on a key nobody has. Two runs did, before this.
 const key = generatePrivateKey();
 const holder = privateKeyToAccount(key);
+appendFileSync(resolve(import.meta.dir, '../e2e-holders.txt'), `${new Date().toISOString()} ${holder.address} ${key}\n`, { mode: 0o600 });
 const me = createWalletClient({ chain: wc.public.chain, transport: http(), account: holder });
 
 async function as(fn: string, args: unknown[], address: Hex = W.agUSD, abi: any = AgUSDAbi) {
@@ -34,6 +39,8 @@ async function as(fn: string, args: unknown[], address: Hex = W.agUSD, abi: any 
 }
 const read = <T>(fn: string, args: unknown[] = [], address: Hex = W.agUSD, abi: any = AgUSDAbi) =>
   wc.public.readContract({ address, abi, functionName: fn, args } as any) as Promise<T>;
+const ethRead = <T>(fn: string, address: Hex, abi: any) =>
+  eth.public.readContract({ address, abi, functionName: fn } as any) as Promise<T>;
 
 console.log(`holder ${holder.address}\n`);
 
@@ -51,12 +58,12 @@ await as('drip', [], W.usdcFaucet, UsdcFaucetAbi);
 check((await read<bigint>('balanceOf', [holder.address], W.usdc, TestUSDCAbi)) === 20_000_000_000n, 'a second drip straight after is paid too');
 
 // 3. Deposit the whole drip at the live price. The queued exit in step 6 needs the holder's stake to be more than
-// the buffer, which is a fifth of the vault, so the stake is sized against the vault rather than fixed: with
-// 5,000 into a vault that had grown past 20,000, the buffer covered the "queued" exit and it was paid on the spot.
+// the buffer, which is a tenth of the vault, so the stake is sized against the vault rather than fixed: with
+// 5,000 into a vault that had grown past 20,000, a larger buffer covered the "queued" exit and paid it on the spot.
 console.log('3. deposit');
 const s0 = await snapshot();
 const amount = parseUnits('10000', 6);
-if ((s0.totalAssets + amount) / 5n >= amount - parseUnits('250', 6)) {
+if ((s0.totalAssets + amount) / 10n >= amount - parseUnits('250', 6)) {
   console.log(`  the vault holds ${usd(s0.totalAssets)}; a 10,000 stake would fit in its buffer, so step 6 cannot queue`);
   process.exit(1);
 }
@@ -83,16 +90,26 @@ await as('redeem', [small, holder.address, holder.address]);
 const got = (await read<bigint>('balanceOf', [holder.address], W.usdc, TestUSDCAbi)) - before;
 check(got >= outPreview && got - outPreview < parseUnits('0.01', 6), `received ${usd(got)}, the preview or a hair more`);
 
-// 5. The keeper allocates the excess buffer to the book and marks the vault.
+// 5. The keeper sends everything above the 10% reserve floor to the book: over the messenger to Ethereum, into
+// the issuer, and out to custody as receivables, in one pass.
 console.log('5. keeper: allocate, relay, run the book, mark');
+const bookBefore = await ethRead<bigint>('offChainAssets', E.issuer, AbfAssetIssuerAbi);
+const positionBefore = await ethRead<bigint>('positionValue', E.receiver, AgamaL1ReceiverAbi);
+const liquidBefore = (await snapshot()).liquid;
 await relayAll();
 const moved = await rebalance();
-check(moved, 'the buffer above 30% was allocated');
+check(moved, 'everything above the reserve floor was allocated');
 await relayAll();
 await runBook();
 await report();
 const s2 = await snapshot();
-check(s2.liquid * 10_000n <= s2.totalAssets * 2_100n, `buffer back near 20%: ${usd(s2.liquid)} of ${usd(s2.totalAssets)}`);
+const sent = liquidBefore - s2.liquid;
+// The keeper keeps a basis point over the floor so an allocation is never refused on a second of unlocking.
+check(s2.liquid * 10_000n <= s2.totalAssets * 1_002n + parseUnits('1', 6) * 10_000n, `buffer down to the 10% floor: ${usd(s2.liquid)} of ${usd(s2.totalAssets)}`);
+const positionAfter = await ethRead<bigint>('positionValue', E.receiver, AgamaL1ReceiverAbi);
+check(positionAfter - positionBefore >= sent - parseUnits('1', 6), `the L1 receiver subscribed it: position ${usd(positionBefore)} -> ${usd(positionAfter)}`);
+const bookAfter = await ethRead<bigint>('offChainAssets', E.issuer, AbfAssetIssuerAbi);
+check(bookAfter > bookBefore, `the issuer wired it to custody: book ${usd(bookBefore)} -> ${usd(bookAfter)}`);
 check(s2.sharePrice >= s1.sharePrice, `price ${formatUnits(s1.sharePrice, 6)} -> ${formatUnits(s2.sharePrice, 6)}`);
 
 // 6. Ask for more than the buffer holds: it queues at today's price.
