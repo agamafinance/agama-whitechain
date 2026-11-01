@@ -53,6 +53,27 @@ export async function refill() {
   return s.liquid < target / 2n && s.deployed > 0n ? target - s.liquid : 0n;
 }
 
+/// Cash already burned on Ethereum on its way back to the vault and not yet settled there. Counted against what
+/// the vault needs, so a refill whose relay is still pending is not asked for a second time.
+export async function inbound() {
+  const [sentHome, returned] = await Promise.all([
+    eth.public.readContract({ address: E.receiver, abi: AgamaL1ReceiverAbi, functionName: 'totalSentHome' }),
+    wc.public.readContract({ address: W.allocator, abi: CrossChainAllocatorAbi, functionName: 'totalReturned' }),
+  ]);
+  return sentHome > returned ? sentHome - returned : 0n;
+}
+
+/// Whether the vault has something for the keeper right now: cash above the floor to send, a queue the idle cash
+/// does not cover, or a buffer under half the floor. One read on Whitechain, cheap enough to ask every few seconds;
+/// Ethereum is read only when the vault is short, to see whether the cash is already on its way.
+export async function vaultNeedsWork() {
+  const s = await snapshot();
+  const target = await floor(s.totalAssets);
+  if (s.liquid > target && s.liquid - target >= BUFFER.minMove) return true;
+  const short = s.pending > s.idle || (s.liquid < target / 2n && s.deployed > 0n);
+  return short && (await inbound()) === 0n;
+}
+
 /// How much the queue needs from the book: what is owed beyond the cash already here, plus the buffer target.
 export async function shortfall() {
   const s = await snapshot();
