@@ -61,7 +61,7 @@ export default function PortfolioPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              <Position logo="/logos/usdc.svg" symbol="USDC" name="USD Coin" amount={loaded ? fmt(user.usdc) : '-'} href="/faucet" />
+              <Position logo="/logos/usdc.svg" symbol="USDC" name="Mock USDC" amount={loaded ? fmt(user.usdc) : '-'} href="/faucet" />
               <Position
                 logo="/logos/agusd.svg"
                 symbol="agUSD"
@@ -72,7 +72,7 @@ export default function PortfolioPage() {
               />
               {user.usdc === 0n && user.agusd === 0n && open.length === 0 && (
                 <p className="rounded-2xl bg-[#fdfaf1] px-5 py-4 text-[14px] text-fg-muted shadow-[0_1px_3px_rgba(20,50,35,0.06)]">
-                  Nothing here yet. Get test USDC on the{' '}
+                  Nothing here yet. Get mock USDC on the{' '}
                   <Link href="/faucet" className="underline underline-offset-2">Faucet</Link>, then deposit
                   it on <Link href="/" className="underline underline-offset-2">Earn</Link> and the share
                   price does the rest.

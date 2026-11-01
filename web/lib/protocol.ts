@@ -340,7 +340,7 @@ export function useActions() {
 
   return {
     faucet: () =>
-      send('Test USDC from the faucet', '10,000 USDC is in your wallet.', {
+      send('Mock USDC from the faucet', '10,000 mock USDC is in your wallet.', {
         address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'faucet',
       } as any),
     approve: (amount: bigint) =>
