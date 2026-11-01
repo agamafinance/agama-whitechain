@@ -68,9 +68,9 @@ export default function FaucetPage() {
           </p>
 
           <div className="mt-7 flex flex-wrap gap-8">
-            <Stat label="Network" value="Whitechain Sepolia" />
             <Stat label="Asset" value="Test USDC" />
             <Stat label="Your USDC" value={usdc !== undefined ? fmt(usdc) : '-'} />
+            <Stat label="Your WBT" value={wbt.data ? Number(wbt.data.formatted).toFixed(4) : '-'} />
           </div>
         </div>
       </section>
