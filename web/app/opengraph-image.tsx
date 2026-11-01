@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'agUSD on Whitechain: a synthetic dollar that earns private credit yield';
+export const alt = 'agUSD: earn private credit yield on Whitechain';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -15,7 +15,7 @@ export default function OpenGraph() {
       >
         <div style={{ display: 'flex', fontSize: 30, letterSpacing: 2, opacity: 0.75 }}>AGAMA · WHITECHAIN</div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: 1.05 }}>A synthetic dollar that earns</div>
+          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: 1.05 }}>Earn private credit yield</div>
           <div style={{ fontSize: 36, marginTop: 24, opacity: 0.8 }}>
             agUSD · one ERC-4626 token · ABF private credit · CCTP V2 to Ethereum
           </div>
