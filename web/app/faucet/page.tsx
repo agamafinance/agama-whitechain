@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Copy, ExternalLink } from 'lucide-react';
 import { useBalance } from 'wagmi';
@@ -10,23 +10,14 @@ import { WBT_FAUCET, whitechainSepolia } from '@/lib/chains';
 import { useActions, useUser } from '@/lib/protocol';
 import { asset } from '@/lib/asset';
 
-const COOLDOWN = 3600;
-
 export default function FaucetPage() {
   const user = useUser();
   const address = user.address;
   const wbt = useBalance({ address, chainId: whitechainSepolia.id, query: { enabled: !!address } });
   const act = useActions();
   const [copied, setCopied] = useState(false);
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   const usdc = user.usdc;
-  const last = user.lastDrip !== undefined ? Number(user.lastDrip) : 0;
-  const wait = last ? Math.max(0, last + COOLDOWN - now) : 0;
   // Both faucets stay on the page whatever the wallet holds: gas and mock dollars run out and get topped up
   // again, so neither row is a step that is ever done. Minting only waits on gas when there is none.
   const noGas = !!address && wbt.data !== undefined && wbt.data.value === 0n;
@@ -105,16 +96,16 @@ export default function FaucetPage() {
             title="Mint mock USDC"
             blurb={
               !address
-                ? 'Connect your wallet first. 10,000 mock USDC an hour, straight from the contract.'
+                ? 'Connect your wallet first. 10,000 mock USDC per click, as often as you like.'
                 : noGas
-                  ? 'Get WBT above first: minting is a transaction. 10,000 mock USDC an hour.'
-                  : '10,000 mock USDC an hour, straight from the contract.'
+                  ? 'Get WBT above first: minting is a transaction. 10,000 mock USDC per click.'
+                  : '10,000 mock USDC per click, as often as you like.'
             }
           >
             <TxButton
               fit
-              label={wait > 0 ? `Again in ${Math.ceil(wait / 60)} min` : 'Get 10,000 USDC'}
-              disabled={!address || noGas || wait > 0}
+              label="Get 10,000 USDC"
+              disabled={!address || noGas}
               action={act.faucet}
             />
           </StepRow>
