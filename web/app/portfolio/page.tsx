@@ -1,12 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
-import { card, primaryBtn, Status, Step } from '@/components/ui';
+import { card, primaryBtn } from '@/components/ui';
 import { fmt, usd } from '@/lib/format';
 import { wcAddress, wcTx } from '@/lib/chains';
-import { netApy, useActions, useBasis, useRequests, useUser, useVault } from '@/lib/protocol';
-import { useState } from 'react';
+import { useActions, useRequests, useUser, useVault } from '@/lib/protocol';
 import { asset } from '@/lib/asset';
 
 export default function PortfolioPage() {
@@ -14,37 +14,17 @@ export default function PortfolioPage() {
   const user = useUser();
   const { vault } = useVault();
   const { data: requests } = useRequests();
-  const { data: basis } = useBasis();
   const act = useActions();
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<{ text?: string; error?: string }>();
+  const [busy, setBusy] = useState<string | null>(null);
 
   const price = vault?.sharePrice ?? 1_000_000n;
   const agValue = user.agusd !== undefined ? (user.agusd * price) / 1_000_000n : undefined;
-  const queued = (requests ?? []).filter((r) => !r.settled).reduce((a, r) => a + r.assets, 0n);
-  // Net worth counts what is on its way out: the agUSD is burned at request time and the claim lives in the
-  // vault, so leaving it out made the money look like it had gone the moment somebody asked for it.
-  const netWorth =
-    user.usdc !== undefined && agValue !== undefined ? user.usdc + agValue + queued : undefined;
-
-  // Earned: what is held now, plus everything taken out or queued to come out, less everything put in.
-  const earned =
-    basis && agValue !== undefined ? agValue + basis.withdrawn + basis.queued - basis.deposited : undefined;
-  const apy = netApy(vault);
-  const perDay = agValue !== undefined && apy !== undefined ? (Number(agValue) / 1e6) * (apy / 100) / 365 : undefined;
-
-  async function settle() {
-    setBusy(true);
-    setStatus({ text: 'Settling the queue' });
-    try {
-      await act.settle();
-      setStatus({ text: 'Settled what the cash covers.' });
-    } catch (e) {
-      setStatus({ error: e instanceof Error ? e.message : 'Failed' });
-    } finally {
-      setBusy(false);
-    }
-  }
+  const open = (requests ?? []).filter((r) => !r.settled);
+  // Everything the wallet owns, including what it owns while leaving. The agUSD is burned when an exit queues and
+  // the claim on it lives in the vault, so counting only the balances made the money look like it had gone.
+  const leaving = open.reduce((a, r) => a + r.assets, 0n);
+  const loaded = user.usdc !== undefined && agValue !== undefined;
+  const netWorth = loaded ? user.usdc! + agValue! + leaving : 0n;
 
   return (
     <section className="px-6 md:px-24 pt-10 md:pt-14 pb-24">
@@ -55,32 +35,20 @@ export default function PortfolioPage() {
           <div className={`mt-8 text-center ${card}`}>
             <p className="text-[15px] text-fg-muted">Connect your wallet to view your positions.</p>
             <div className="mx-auto mt-4 max-w-[260px]">
-              <button type="button" onClick={openConnectModal} className={primaryBtn}>Connect Wallet</button>
+              <button type="button" onClick={openConnectModal} className={primaryBtn}>
+                Connect Wallet
+              </button>
             </div>
           </div>
         ) : (
           <>
             <div className={`mt-6 ${card}`}>
               <div className="text-[12px] uppercase tracking-wider text-fg-muted">Net worth</div>
-              <div className="text-[34px] text-fg font-semibold tabular-nums">{usd(netWorth)}</div>
-              {queued > 0n && <div className="text-[12px] text-fg-muted">Includes {usd(queued)} queued to come out.</div>}
-              <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#254839]/10 pt-4 sm:grid-cols-4">
-                <Figure label="Deposited" value={usd(basis?.deposited)} />
-                <Figure label="Taken out" value={usd(basis ? basis.withdrawn + basis.queued : undefined)} />
-                <Figure
-                  label="Earned"
-                  value={earned === undefined ? '-' : `${earned >= 0n ? '+' : '-'}${usd(earned >= 0n ? earned : -earned, 4)}`}
-                  strong
-                />
-                <Figure
-                  label="At today's rate"
-                  value={perDay === undefined ? '-' : `$${perDay.toLocaleString('en-US', { maximumFractionDigits: 4 })} a day`}
-                />
+              <div className="text-[34px] text-fg font-semibold tabular-nums">
+                {loaded ? usd(netWorth) : <span className="text-fg-muted/40">$0.00</span>}
               </div>
-              {basis && basis.deposits === 0 && (user.agusd ?? 0n) > 0n && (
-                <div className="mt-2 text-[12px] text-fg-muted">
-                  This wallet received its agUSD rather than depositing it, so what it paid is not on chain.
-                </div>
+              {leaving > 0n && (
+                <div className="text-[12px] text-fg-muted">Includes {usd(leaving)} on its way out.</div>
               )}
               <a
                 href={wcAddress(user.address)}
@@ -93,69 +61,71 @@ export default function PortfolioPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              <Position logo="/logos/usdc.svg" symbol="USDC" name="USD Coin (test)" amount={fmt(user.usdc)} href="/faucet" />
+              <Position logo="/logos/usdc.svg" symbol="USDC" name="USD Coin" amount={loaded ? fmt(user.usdc) : '-'} href="/faucet" />
               <Position
                 logo="/logos/agusd.svg"
                 symbol="agUSD"
-                name="Agama USD, ERC-4626"
-                amount={fmt(user.agusd, 4)}
-                sub={agValue !== undefined ? `${usd(agValue)} at today’s price` : undefined}
+                name="Agama USD"
+                amount={loaded ? fmt(user.agusd) : '-'}
+                sub={agValue !== undefined ? `${fmt(agValue)} USDC at today's price` : undefined}
                 href="/"
               />
-            </div>
-
-            <div className={`mt-6 ${card}`}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-[17px] font-semibold text-fg">Queued withdrawals</h2>
-                {(requests ?? []).some((r) => !r.settled) && (
-                  <button
-                    type="button"
-                    onClick={settle}
-                    disabled={busy}
-                    className="rounded-full bg-[#254839] px-4 py-2 text-[13px] font-medium text-[#fdf8ed] hover:bg-[#1F3D31] disabled:opacity-45"
-                  >
-                    {busy ? <Step text={status?.text} /> : 'Settle the queue'}
-                  </button>
-                )}
-              </div>
-              <p className="mt-1 text-[12px] text-fg-muted">
-                Priced when you asked, paid first in first out as the book&apos;s collections come home. Anyone can
-                settle the queue; the keeper does it on every tick.
-              </p>
-              {!busy && <Status text={status?.text} error={status?.error} />}
-              {requests && requests.length > 0 ? (
-                <ul className="mt-4 divide-y divide-[#254839]/10">
-                  {requests.map((r) => (
-                    <li key={String(r.id)} className="flex items-center justify-between py-3 text-[14px]">
-                      <div>
-                        <div className="font-medium text-fg tabular-nums">{usd(r.assets)}</div>
-                        <a href={wcTx(r.tx)} target="_blank" rel="noreferrer" className="text-[12px] text-fg-muted hover:underline">
-                          Request #{String(r.id)} · {fmt(r.shares, 4)} agUSD burned
-                        </a>
-                      </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[12px] ${
-                          r.settled ? 'bg-[#254839]/[0.08] text-fg' : 'bg-[#C97A40]/15 text-[#A85A2C]'
-                        }`}
-                      >
-                        {r.settled ? 'Paid' : 'In the queue'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-4 text-[14px] text-fg-muted">
-                  None. Withdrawals within the buffer are instant and never queue.
+              {user.usdc === 0n && user.agusd === 0n && open.length === 0 && (
+                <p className="rounded-2xl bg-[#fdfaf1] px-5 py-4 text-[14px] text-fg-muted shadow-[0_1px_3px_rgba(20,50,35,0.06)]">
+                  Nothing here yet. Get test USDC on the{' '}
+                  <Link href="/faucet" className="underline underline-offset-2">Faucet</Link>, then deposit
+                  it on <Link href="/" className="underline underline-offset-2">Earn</Link> and the share
+                  price does the rest.
                 </p>
               )}
             </div>
 
-            {user.usdc === 0n && user.agusd === 0n && (
-              <p className="mt-4 rounded-2xl bg-[#fdfaf1] px-5 py-4 text-[14px] text-fg-muted shadow-[0_1px_3px_rgba(20,50,35,0.06)]">
-                Nothing here yet. Get test USDC on the{' '}
-                <Link href="/faucet" className="underline underline-offset-2">Faucet</Link>, then deposit it on{' '}
-                <Link href="/" className="underline underline-offset-2">Earn</Link>.
-              </p>
+            {open.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-[15px] font-semibold">Withdrawal queue</h2>
+                <p className="mt-1 text-[12.5px] leading-snug text-fg-muted">
+                  Your agUSD is already burned for each of these, priced when you asked. The queue is paid strictly
+                  in order as the book&apos;s collections come home from Ethereum. Nobody can jump it and nobody can
+                  hold it up: anyone may push it along, and each claim pays its own owner.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {open.map((r) => (
+                    <div
+                      key={String(r.id)}
+                      className="flex items-center justify-between rounded-xl border border-black/10 px-3.5 py-2.5"
+                    >
+                      <div>
+                        <div className="text-[13.5px] font-medium">{usd(r.assets)} USDC</div>
+                        <a
+                          href={wcTx(r.tx)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[12px] text-fg-muted hover:underline"
+                        >
+                          Claim #{String(r.id)} · waiting for collections
+                        </a>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busy !== null}
+                        onClick={async () => {
+                          setBusy(String(r.id));
+                          try {
+                            await act.settle();
+                          } catch {
+                            // The toast carries the reason.
+                          } finally {
+                            setBusy(null);
+                          }
+                        }}
+                        className="rounded-lg bg-[#254839] px-3 py-1.5 text-[12.5px] font-medium text-[#fdf8ed] disabled:opacity-50"
+                      >
+                        {busy === String(r.id) ? 'Submitting' : 'Push the queue'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </>
         )}
@@ -164,31 +134,34 @@ export default function PortfolioPage() {
   );
 }
 
-function Figure({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div>
-      <div className="text-[11px] uppercase tracking-wider text-fg-muted">{label}</div>
-      <div className={`tabular-nums ${strong ? 'text-[18px] font-semibold text-[#2f7d5b]' : 'text-[16px] text-fg'}`}>{value}</div>
-    </div>
-  );
-}
-
 function Position({
-  logo, symbol, name, amount, sub, href,
-}: { logo: string; symbol: string; name: string; amount: string; sub?: string; href: string }) {
+  logo,
+  symbol,
+  name,
+  amount,
+  sub,
+  href,
+}: {
+  logo: string;
+  symbol: string;
+  name: string;
+  amount: string;
+  sub?: string;
+  href: string;
+}) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 rounded-2xl bg-[#fdfaf1] px-5 py-4 shadow-[0_1px_3px_rgba(20,50,35,0.06),0_10px_30px_rgba(20,50,35,0.06)] hover:shadow-[0_1px_3px_rgba(20,50,35,0.08),0_16px_40px_rgba(20,50,35,0.12)]"
+      className="flex items-center gap-4 rounded-2xl bg-[#fdfaf1] px-5 py-4 shadow-[0_1px_3px_rgba(20,50,35,0.06)]"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={asset(logo)} alt="" className="h-9 w-9" />
-      <div className="min-w-0">
-        <div className="text-[15px] font-medium text-fg">{symbol}</div>
-        <div className="text-[12px] text-fg-muted">{name}</div>
+      <img src={asset(logo)} alt="" width={36} height={36} className="h-9 w-9" />
+      <div>
+        <div className="text-[15px] text-fg font-medium">{symbol}</div>
+        <div className="text-[13px] text-fg-muted">{name}</div>
       </div>
       <div className="ml-auto text-right">
-        <div className="text-[17px] font-semibold tabular-nums text-fg">{amount}</div>
+        <div className="text-[16px] text-fg font-semibold tabular-nums">{amount}</div>
         {sub && <div className="text-[12px] text-fg-muted">{sub}</div>}
       </div>
     </Link>
