@@ -28,7 +28,7 @@ export const ethAddress = (a: string) => `${ETH_EXPLORER}/address/${a}`;
 export const ethTx = (h: string) => `${ETH_EXPLORER}/tx/${h}`;
 
 /// Ethereum is only ever read: nobody signs on the L1 from this app, the keeper does. Several public endpoints,
-/// because a single free one going quiet would blank half the transparency page.
+/// because a single free one going quiet would blank the book's figures.
 export const l1 = createPublicClient({
   chain: sepolia,
   // Batched, so a multicall and a page of getLogs go out as one request each, and three endpoints deep so a

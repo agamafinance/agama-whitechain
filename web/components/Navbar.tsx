@@ -9,7 +9,6 @@ import { asset } from '@/lib/asset';
 const NAV = [
   { href: '/portfolio', label: 'Portfolio' },
   { href: '/', label: 'Earn' },
-  { href: '/transparency', label: 'Transparency' },
   { href: '/faucet', label: 'Faucet' },
 ];
 
