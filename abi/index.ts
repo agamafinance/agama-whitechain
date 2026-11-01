@@ -3,5 +3,6 @@ export { AgUSDAbi } from './AgUSD';
 export { CrossChainAllocatorAbi } from './CrossChainAllocator';
 export { AttestedMessengerAbi } from './AttestedMessenger';
 export { TestUSDCAbi } from './TestUSDC';
+export { UsdcFaucetAbi } from './UsdcFaucet';
 export { AbfAssetIssuerAbi } from './AbfAssetIssuer';
 export { AgamaL1ReceiverAbi } from './AgamaL1Receiver';
