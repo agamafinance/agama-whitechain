@@ -74,7 +74,7 @@ export default function FaucetPage() {
           <h2 className="text-[13px] uppercase tracking-wider text-fg-muted mb-2">Faucets</h2>
 
           <StepRow
-              icon="/logos/wbt.svg"
+              icon="/logos/wbt.png"
               title="Get WBT for gas"
               blurb="Sign in with GitHub on Whitechain's faucet, paste your address. 0.5 WBT a day."
             >
