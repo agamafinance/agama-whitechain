@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swa
 
 export const metadata: Metadata = {
   title: { default: 'Agama on Whitechain', template: 'Agama | %s' },
-  description: 'agUSD: a synthetic dollar that earns private credit yield, settled on Whitechain.',
+  description: 'agUSD: earn private credit yield on Whitechain.',
   metadataBase: new URL('https://app.agama.finance/whitechain/'),
 };
 

@@ -106,16 +106,15 @@ export default function EarnPage() {
         art="/logos/coin-pair.svg"
         title={
           <>
-            A synthetic dollar that earns
+            Earn private credit yield
             <br />
-            settled on Whitechain
+            on Whitechain
           </>
         }
       >
         <p className="mt-4 max-w-[660px] text-[15px] text-fg-muted">
-          Deposit USDC and hold agUSD, one ERC-4626 token whose price carries the yield. The vault sends its capital
-          over CCTP to an asset-backed finance issuer on Ethereum, which funds receivables off chain and brings the
-          collections home. There is nothing to stake, claim or come back for. Live on Whitechain Sepolia.
+          Deposit USDC, hold agUSD. Its price grows with the yield of asset-backed credit funded on Ethereum.
+          Nothing to stake or claim.
         </p>
         <div className="mt-7 flex flex-wrap gap-8">
           <Stat label="Net APY" value={apy} sub="Target, after fee and buffer" />
