@@ -29,7 +29,6 @@ export function ConnectPill() {
         }
         return (
           <button type="button" onClick={openAccountModal} className={pill}>
-            <span className="h-2 w-2 rounded-full bg-[#70B19E]" aria-hidden />
             {account.ensName ?? short(account.address)}
           </button>
         );
