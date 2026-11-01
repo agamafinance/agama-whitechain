@@ -23,24 +23,34 @@ export async function navOfBook() {
   return position + (sent - received) + (sentHome - returned);
 }
 
+/// The buffer the vault must keep: its reserve floor, rounded up the way `pushToStrategy` rounds it, plus a margin.
+/// Profit unlocks by the second, so total assets, and the floor with them, rise between the read here and the
+/// block the allocation lands in: sized to the floor exactly, one was refused by seven micro-dollars. A cent, or
+/// a basis point of the vault when that is more, covers far more than a block of unlocking.
+async function floor(totalAssets: bigint) {
+  const cfg = await wc.public.readContract({ address: W.agUSD, abi: AgUSDAbi, functionName: 'config' });
+  const reserveBps = BigInt(cfg[1]);
+  const margin = totalAssets / 10_000n > 10_000n ? totalAssets / 10_000n : 10_000n;
+  return (totalAssets * reserveBps + 9_999n) / 10_000n + margin;
+}
+
+/// Sends everything above the reserve floor to the book.
 export async function rebalance() {
   const s = await snapshot();
-  const target = (s.totalAssets * BigInt(BUFFER.targetBps)) / 10_000n;
-  const trigger = (s.totalAssets * BigInt(BUFFER.triggerBps)) / 10_000n;
-  if (s.liquid > trigger && s.liquid - target > 1_000_000n) {
+  const target = await floor(s.totalAssets);
+  if (s.liquid > target && s.liquid - target >= BUFFER.minMove) {
     await send(W.allocator, CrossChainAllocatorAbi, 'allocate', [s.liquid - target]);
     return true;
   }
   return false;
 }
 
-/// How much the buffer needs to be whole again, once it has fallen under the refill line. Paying the queue can
+/// How much the buffer needs to be back at the floor, once it has fallen under half of it. Paying the queue can
 /// drain it to nothing, and an empty buffer turns the next instant exit into a queued one.
 export async function refill() {
   const s = await snapshot();
-  const line = (s.totalAssets * BigInt(BUFFER.refillBps)) / 10_000n;
-  const target = (s.totalAssets * BigInt(BUFFER.targetBps)) / 10_000n;
-  return s.liquid < line && s.deployed > 0n ? target - s.liquid : 0n;
+  const target = await floor(s.totalAssets);
+  return s.liquid < target / 2n && s.deployed > 0n ? target - s.liquid : 0n;
 }
 
 /// How much the queue needs from the book: what is owed beyond the cash already here, plus the buffer target.

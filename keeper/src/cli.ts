@@ -35,7 +35,12 @@ async function tick() {
     await bringHome(short);
   }
   console.log('rebalance');
-  if (await rebalance()) await relayAll();
+  if (await rebalance()) {
+    // Straight through: relay the allocation so the receiver subscribes it, then let the book wire it to custody
+    // in the same tick rather than leaving it as issuer cash until the next one.
+    await relayAll();
+    await runBook();
+  }
   await relayAll();
   console.log('report');
   await report();
