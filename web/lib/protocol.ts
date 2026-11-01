@@ -14,6 +14,7 @@ import {
   AgUSDAbi,
   CrossChainAllocatorAbi,
   TestUSDCAbi,
+  UsdcFaucetAbi,
 } from '@abi';
 import { ETHEREUM, WHITECHAIN } from './deployments';
 import { fmt } from './format';
@@ -100,13 +101,12 @@ export function useUser() {
       { chainId, address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'allowance', args: [a, WHITECHAIN.agUSD] },
       { chainId, address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'maxWithdraw', args: [a] },
       { chainId, address: WHITECHAIN.agUSD, abi: AgUSDAbi, functionName: 'maxRedeem', args: [a] },
-      { chainId, address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'lastDrip', args: [a] },
     ],
     allowFailure: false,
     query: { enabled: !!address, refetchInterval: REFRESH },
   });
-  const [usdc, agusd, allowance, maxWithdraw, maxRedeem, lastDrip] = q.data ?? [];
-  return { ...q, address, usdc, agusd, allowance, maxWithdraw, maxRedeem, lastDrip };
+  const [usdc, agusd, allowance, maxWithdraw, maxRedeem] = q.data ?? [];
+  return { ...q, address, usdc, agusd, allowance, maxWithdraw, maxRedeem };
 }
 
 export type Book = {
@@ -341,7 +341,7 @@ export function useActions() {
   return {
     faucet: () =>
       send('Mock USDC from the faucet', '10,000 mock USDC is in your wallet.', {
-        address: WHITECHAIN.usdc, abi: TestUSDCAbi, functionName: 'faucet',
+        address: WHITECHAIN.usdcFaucet, abi: UsdcFaucetAbi, functionName: 'drip',
       } as any),
     approve: (amount: bigint) =>
       send('Approve USDC for agUSD', 'The vault can take your deposit.', {

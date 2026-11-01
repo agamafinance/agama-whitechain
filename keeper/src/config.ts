@@ -38,7 +38,7 @@ const json = (f: string) => JSON.parse(readFileSync(resolve(root, 'contracts/dep
 
 export const W = json('whitechain-sepolia.json') as {
   chainId: number; domain: number; deployedAtBlock: number;
-  usdc: Address; messenger: Address; agUSD: Address; allocator: Address; attester: Address; admin: Address;
+  usdc: Address; usdcFaucet: Address; messenger: Address; agUSD: Address; allocator: Address; attester: Address; admin: Address;
 };
 export const E = json('ethereum-sepolia.json') as {
   chainId: number; domain: number; deployedAtBlock: number;

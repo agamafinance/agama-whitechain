@@ -56,7 +56,8 @@ flowchart LR
 | [`AbfAssetIssuer`](contracts/src/l1/AbfAssetIssuer.sol) | Ethereum | The simulated ABF issuer. A closed ERC-4626: allowlisted holders only, redemptions only against cash on hand, an off-chain book capped at 90% of assets. |
 | [`AttestedMessenger`](contracts/src/cctp/AttestedMessenger.sol) | both | Burn-and-mint transport that speaks CCTP V2: Circle's signatures, Circle's message layout, Circle's attestation encoding. |
 | [`CctpMessageV2`](contracts/src/libraries/CctpMessageV2.sol) | both | Reads and writes MessageV2 and BurnMessageV2 at Circle's offsets. |
-| [`TestUSDC`](contracts/src/mocks/TestUSDC.sol) | both | Six decimal test dollar with a faucet: 10,000 an hour. |
+| [`TestUSDC`](contracts/src/mocks/TestUSDC.sol) | both | Six decimal mock dollar. Its built-in faucet gives 10,000 an hour. |
+| [`UsdcFaucet`](contracts/src/mocks/UsdcFaucet.sol) | Whitechain | Holds MINTER_ROLE on TestUSDC and gives 10,000 per call with no cooldown. This is the faucet the app uses. |
 
 ## How agUSD works
 
@@ -133,7 +134,7 @@ These facts come from [docs.whitechain.io](https://docs.whitechain.io) and were 
 | --- | --- |
 | **Earn** | Deposit and withdraw. The card says before you click whether a withdrawal will be instant or queued. Below it are the price chart, the route with a live amount at every stop, and the credit sleeves. |
 | **Portfolio** | The Stellar app's page: net worth with queued exits counted, USDC and agUSD at today's price, and the withdrawal queue with a button to push it along. |
-| **Faucet** | The Stellar app's page: the steps left to get funded. WBT from Whitechain's faucet appears only while the wallet has no gas, then test USDC straight from the contract. |
+| **Faucet** | The Stellar app's page, with two rows that are always shown: WBT from Whitechain's faucet, and 10,000 mock USDC per click with no cooldown. |
 
 Every transaction raises a toast. It shows the wait for your wallet, then the confirmation, then the result, with an explorer link as soon as there is a hash.
 
@@ -166,6 +167,7 @@ The keys are testnet keys, stored as repository secrets.
 | CrossChainAllocator | [`0x04477d606b751A7CBC6De478c749d0ffC726416f`](https://explorer.testnet.whitechain.io/address/0x04477d606b751A7CBC6De478c749d0ffC726416f) |
 | AttestedMessenger | [`0x6436CAC378FA46b2Cd4ff455Ff0fd07E99eb699b`](https://explorer.testnet.whitechain.io/address/0x6436CAC378FA46b2Cd4ff455Ff0fd07E99eb699b) |
 | TestUSDC | [`0x5b00EAc2E4359b818314E7F42c2805e29d587658`](https://explorer.testnet.whitechain.io/address/0x5b00EAc2E4359b818314E7F42c2805e29d587658) |
+| UsdcFaucet | [`0xA76a52Dd0c815E55887059E6Ea95b39d22939942`](https://explorer.testnet.whitechain.io/address/0xA76a52Dd0c815E55887059E6Ea95b39d22939942) |
 
 **Ethereum Sepolia** (chain 11155111, CCTP domain 0), verified on Sourcify
 

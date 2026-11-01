@@ -6,6 +6,8 @@ export const WHITECHAIN = {
   chainId: 1874,
   deployedAtBlock: 11680057n,
   usdc: '0x5b00EAc2E4359b818314E7F42c2805e29d587658' as Address,
+  // Mints without TestUSDC's hourly cooldown, which is a constant in the token.
+  usdcFaucet: '0xA76a52Dd0c815E55887059E6Ea95b39d22939942' as Address,
   messenger: '0x6436CAC378FA46b2Cd4ff455Ff0fd07E99eb699b' as Address,
   agUSD: '0x4F78D5Ba2242F77CfD75b7B2a1BD8EEf82DA67d8' as Address,
   allocator: '0x04477d606b751A7CBC6De478c749d0ffC726416f' as Address,

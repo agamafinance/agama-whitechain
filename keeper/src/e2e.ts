@@ -7,7 +7,7 @@
 import { formatUnits, parseEther, parseUnits, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, http } from 'viem';
-import { AgUSDAbi, TestUSDCAbi } from '../../abi';
+import { AgUSDAbi, TestUSDCAbi, UsdcFaucetAbi } from '../../abi';
 import { W, wc } from './config';
 import { relayAll } from './relay';
 import { bringHome, runBook } from './book';
@@ -43,16 +43,12 @@ const gas = await wc.wallet.sendTransaction({ to: holder.address, value: parseEt
 await wc.public.waitForTransactionReceipt({ hash: gas });
 check((await wc.public.getBalance({ address: holder.address })) === parseEther('0.01'), `0.01 WBT ${EXPLORER}${gas}`);
 
-// 2. Test USDC from the contract's faucet, and its cooldown.
+// 2. Mock USDC from the faucet, twice in a row: the faucet the app uses has no cooldown.
 console.log('2. faucet');
-await as('faucet', [], W.usdc, TestUSDCAbi);
+await as('drip', [], W.usdcFaucet, UsdcFaucetAbi);
 check((await read<bigint>('balanceOf', [holder.address], W.usdc, TestUSDCAbi)) === 10_000_000_000n, '10,000 USDC arrived');
-try {
-  await wc.public.simulateContract({ account: holder, address: W.usdc, abi: TestUSDCAbi, functionName: 'faucet' } as any);
-  check(false, 'a second drip inside the hour is refused');
-} catch {
-  check(true, 'a second drip inside the hour is refused');
-}
+await as('drip', [], W.usdcFaucet, UsdcFaucetAbi);
+check((await read<bigint>('balanceOf', [holder.address], W.usdc, TestUSDCAbi)) === 20_000_000_000n, 'a second drip straight after is paid too');
 
 // 3. Deposit the whole drip at the live price. The queued exit in step 6 needs the holder's stake to be more than
 // the buffer, which is a fifth of the vault, so the stake is sized against the vault rather than fixed: with
