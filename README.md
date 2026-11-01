@@ -132,9 +132,8 @@ These facts come from [docs.whitechain.io](https://docs.whitechain.io) and were 
 | Page | What it shows |
 | --- | --- |
 | **Earn** | Deposit and withdraw. The card says before you click whether a withdrawal will be instant or queued. Below it are the price chart, the route with a live amount at every stop, and the credit sleeves. |
-| **Portfolio** | What you hold, with queued exits counted. Deposited, taken out and earned come from the vault's own ERC-4626 events. A queued exit shows whether it has been paid. |
-| **Transparency** | Both chains read live, side by side. The vault's deployed figure is checked against the L1 position plus anything in flight. Every crossing, wire, mark and collection appears newest first, with a link to its transaction. |
-| **Faucet** | WBT from Whitechain's faucet, and test USDC straight from the contract. |
+| **Portfolio** | The Stellar app's page: net worth with queued exits counted, USDC and agUSD at today's price, and the withdrawal queue with a button to push it along. |
+| **Faucet** | The Stellar app's page: the steps left to get funded. WBT from Whitechain's faucet appears only while the wallet has no gas, then test USDC straight from the contract. |
 
 Every transaction raises a toast. It shows the wait for your wallet, then the confirmation, then the result, with an explorer link as soon as there is a hash.
 
@@ -221,7 +220,7 @@ cd ../web && pnpm install && pnpm dev   # http://localhost:3007
 contracts/   Foundry. src/whitechain, src/l1, src/cctp, src/libraries, test/, script/
 keeper/      bun + viem. Attester, relayer, the issuer's operations, NAV reporter
 abi/         Generated from the build, shared by keeper and web
-web/         Next 16 + wagmi + RainbowKit. Earn, Portfolio, Transparency, Faucet
+web/         Next 16 + wagmi + RainbowKit. Earn, Portfolio, Faucet
 ```
 
 ## License
