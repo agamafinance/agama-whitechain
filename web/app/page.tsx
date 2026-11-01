@@ -12,7 +12,6 @@ import { AmountBox, card, Hero, Panel, primaryBtn, Row, Segmented, Stat, Status,
 import { NavChart } from '@/components/NavChart';
 import { Route } from '@/components/Route';
 import { CreditVaults } from '@/components/CreditVaults';
-import { WhitechainBand } from '@/components/WhitechainBand';
 import { DASH, fmt, parse, raw, usd } from '@/lib/format';
 import { netApy, precisePrice, useActions, useActivity, useBook, useUser, useVault } from '@/lib/protocol';
 
@@ -207,9 +206,7 @@ export default function EarnPage() {
               Need USDC or WBT for gas?{' '}
               <Link href="/faucet" className="underline hover:text-fg">The faucet tab</Link>. Queued exits and what you
               hold are on{' '}
-              <Link href="/portfolio" className="underline hover:text-fg">the Portfolio tab</Link>, and every crossing,
-              wire and mark behind the price is on{' '}
-              <Link href="/transparency" className="underline hover:text-fg">Transparency</Link>.
+              <Link href="/portfolio" className="underline hover:text-fg">the Portfolio tab</Link>.
             </p>
           </div>
         </div>
@@ -217,8 +214,6 @@ export default function EarnPage() {
         <Route vault={vault} book={book} inflight={inflight} />
 
         <CreditVaults deployed={vault?.deployed} />
-
-        <WhitechainBand />
       </Panel>
     </>
   );
