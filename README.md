@@ -144,7 +144,7 @@ The chart has two views. LIVE draws only the marks the vault has recorded on cha
 
 ## The keeper
 
-[`.github/workflows/keeper.yml`](.github/workflows/keeper.yml) runs `bun src/cli.ts loop`, which ticks every two minutes for just under six hours. An hourly schedule queues the next run behind it. GitHub starts scheduled workflows hours late on this repo, so one tick per scheduled run would have left a queued exit waiting half a day. A tick that fails is retried on the next one. Four failures in a row end the run in error, and GitHub emails about it. Each tick does the following:
+[`.github/workflows/keeper.yml`](.github/workflows/keeper.yml) runs `bun src/cli.ts loop` for just under six hours. It ticks every two minutes, and also checks the vault every five seconds so that it ticks at once when a deposit lands. A deposit is on its way to the book within seconds. An hourly schedule queues the next run behind it. GitHub starts scheduled workflows hours late on this repo, so one tick per scheduled run would have left a queued exit waiting half a day. A tick that fails is retried on the next one. Four failures in a row end the run in error, and GitHub emails about it. Each tick does the following:
 
 1. relays any messages waiting in either direction
 2. works out what the vault needs home for the queue and the buffer, before the book runs

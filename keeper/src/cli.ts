@@ -4,7 +4,7 @@ import { AbfAssetIssuerAbi, CrossChainAllocatorAbi } from '../../abi';
 import { E, eth, sendChecked, W, wc } from './config';
 import { relayAll } from './relay';
 import { bringHome, runBook } from './book';
-import { navOfBook, rebalance, refill, report, settleQueue, shortfall, snapshot } from './vault';
+import { navOfBook, rebalance, refill, report, settleQueue, shortfall, snapshot, vaultNeedsWork, inbound } from './vault';
 
 const usd = (v: bigint) => `$${Number(formatUnits(v, 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
@@ -27,7 +27,10 @@ async function tick() {
   console.log('relay');
   await relayAll();
   // What the vault needs home is known before the book runs, so the book keeps it as cash instead of wiring it out.
-  const short = (await shortfall()) + (await refill());
+  // Less whatever is already crossing back, so a refill whose relay is still pending is not asked for twice.
+  const need = (await shortfall()) + (await refill());
+  const coming = await inbound();
+  const short = need > coming ? need - coming : 0n;
   console.log('book');
   await runBook(short);
   if (short > 0n) {
@@ -48,13 +51,16 @@ async function tick() {
   await status();
 }
 
-/// Ticks every two minutes for `minutes`. GitHub runs a scheduled workflow hours late when it runs it at all, so
-/// the clock lives here and the schedule only has to start a run before the last one ends. A tick that fails is
+/// Ticks for `minutes`: every two minutes, and at once whenever the vault has something to do. Between ticks it
+/// reads the vault every five seconds, so a deposit is on its way to the book within seconds of landing rather
+/// than at the next round number. GitHub runs a scheduled workflow hours late when it runs it at all, so the
+/// clock lives here and the schedule only has to start a run before the last one ends. A tick that fails is
 /// logged and retried on the next one, since a public endpoint failing once is weather; failing several times in
 /// a row is an outage, and that ends the run in error so somebody is told.
 async function loop() {
   const until = Date.now() + Number(arg ?? 350) * 60_000;
   const EVERY = 120_000;
+  const WATCH = 5_000;
   const GIVE_UP = 4;
   let failedInARow = 0;
   while (Date.now() < until) {
@@ -68,7 +74,17 @@ async function loop() {
       console.log(`::warning::tick failed (${failedInARow} in a row): ${(e as Error).message.split('\n')[0]}`);
       if (failedInARow >= GIVE_UP) throw e;
     }
-    await Bun.sleep(Math.max(0, Math.min(EVERY - (Date.now() - started), until - Date.now())));
+    // A failed tick waits the full interval rather than retrying on the next watch, so a fault that the vault's
+    // state keeps triggering cannot spin.
+    while (Date.now() < Math.min(started + EVERY, until)) {
+      await Bun.sleep(WATCH);
+      if (failedInARow > 0) continue;
+      const busy = await vaultNeedsWork().catch(() => false);
+      if (busy) {
+        console.log('vault has work, ticking now');
+        break;
+      }
+    }
   }
 }
 

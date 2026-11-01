@@ -32,7 +32,7 @@ jobs:
           key: keeper-state-${{ github.run_id }}
           restore-keys: keeper-state-
       - run: bun install --frozen-lockfile
-      - run: bun src/cli.ts loop ${{ github.event_name == 'workflow_dispatch' && '30' || '345' }}
+      - run: bun src/cli.ts loop 345
         env:
           DEPLOYER_KEY: ${{ secrets.DEPLOYER_KEY }}
           ATTESTER_KEY: ${{ secrets.ATTESTER_KEY }}
