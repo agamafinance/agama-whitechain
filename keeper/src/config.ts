@@ -75,9 +75,11 @@ export const BOOK = {
   markEverySec: 600n,
 };
 
-/// The vault's buffer policy: aim for 20% liquid. Allocate the excess once it is above 30%, and bring cash home
-/// once it is under 10%, so neither a single deposit nor a single exit triggers a crossing.
-export const BUFFER = { targetBps: 2_000, triggerBps: 3_000, refillBps: 1_000 };
+/// The vault's buffer policy: everything above the vault's own reserve floor goes to the book as soon as a tick
+/// sees it, so a deposit is earning ABF yield within minutes. The floor itself is the contract's `reserveBps`
+/// (10%), read on every tick rather than copied here. Cash comes home once the buffer is under half the floor.
+/// Moves under a dollar wait, so rounding dust never pays for a crossing.
+export const BUFFER = { minMove: 1_000_000n };
 
 export const STATE_FILE = resolve(import.meta.dir, '../state.json');
 
@@ -106,7 +108,10 @@ export async function sendChecked(
       await Bun.sleep(chain === eth ? 12_000 : 2_000);
     }
   }
-  const receipt = await chain.public.waitForTransactionReceipt({ hash });
+  // Bounded: a public endpoint can accept a transaction and never pass it on, and an unbounded wait for its
+  // receipt froze an e2e run for forty minutes with nothing pending on chain. Past three minutes the tick fails,
+  // and the next one starts again from fresh reads with the same nonce.
+  const receipt = await chain.public.waitForTransactionReceipt({ hash: hash!, timeout: 180_000 });
   if (receipt.status !== 'success') throw new Error(`${label} reverted on chain: ${hash}`);
   console.log(`  ${label.padEnd(18)} ${hash}`);
   return hash as `0x${string}`;
