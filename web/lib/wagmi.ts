@@ -19,6 +19,8 @@ const connectors =
 export const wagmiConfig = createConfig({
   connectors,
   chains: [whitechainSepolia],
-  transports: { [whitechainSepolia.id]: http() },
+  // Batched, eight calls to an HTTP request, so a page of getLogs is one request rather than eight, and one retry
+  // rather than viem's three, so a 429 is not answered with three more requests.
+  transports: { [whitechainSepolia.id]: http(undefined, { batch: { batchSize: 8 }, retryCount: 1 }) },
   ssr: true,
 });

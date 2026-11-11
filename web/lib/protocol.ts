@@ -193,6 +193,30 @@ async function logsInChunks<T>(
 
 const WC_LOG_RANGE = 10_000n;
 
+/// What each log query has already read, kept for the life of the tab. The activity feed refetches every 30 seconds
+/// and used to read the whole history since deployment each time: over a million Whitechain blocks, so more than
+/// 300 getLogs a minute from one open tab, which is what got the Whitechain RPC answering 429. A refetch now reads
+/// only the blocks since the last one, with a small overlap for a log a node had not indexed yet, deduplicated.
+const scanned = new Map<string, { to: bigint; logs: any[] }>();
+const OVERLAP = 32n;
+
+async function logsSince<T extends { transactionHash: Hex | null; logIndex: number | null }>(
+  key: string,
+  fetch: (from: bigint, to: bigint) => Promise<T[]>,
+  from: bigint,
+  head: bigint,
+  chunk: bigint,
+): Promise<T[]> {
+  const seen = scanned.get(key);
+  const start = seen ? (seen.to - OVERLAP > from ? seen.to - OVERLAP : from) : from;
+  if (seen && start > head) return seen.logs;
+  const fresh = await logsInChunks(fetch, start, head, chunk);
+  const ids = new Set((seen?.logs ?? []).map((l: T) => `${l.transactionHash}:${l.logIndex}`));
+  const logs = [...(seen?.logs ?? []), ...fresh.filter((l) => !ids.has(`${l.transactionHash}:${l.logIndex}`))];
+  scanned.set(key, { to: head, logs });
+  return logs;
+}
+
 export type Event = {
   chain: 'whitechain' | 'ethereum';
   kind: string;
@@ -213,31 +237,40 @@ export function useActivity() {
     refetchInterval: 30_000,
     queryFn: async (): Promise<{ events: Event[]; navs: { ts: number; price: bigint; block: bigint }[] }> => {
       const wHead = await wc!.getBlockNumber();
-      const eHead = await l1.getBlockNumber();
+      // Ethereum is optional here: without its head the feed still shows Whitechain's rows and the LIVE marks.
+      const eHead = await l1.getBlockNumber().catch(() => null);
       const wLogs = (event: any, address: Address) =>
-        logsInChunks((f, t) => wc!.getLogs({ address, event, fromBlock: f, toBlock: t }), WHITECHAIN.deployedAtBlock, wHead, WC_LOG_RANGE);
+        logsSince(`wc:${address}:${event.name}`, (f, t) => wc!.getLogs({ address, event, fromBlock: f, toBlock: t }) as any, WHITECHAIN.deployedAtBlock, wHead, WC_LOG_RANGE);
       const eLogs = (event: any, address: Address) =>
-        logsInChunks((f, t) => l1.getLogs({ address, event, fromBlock: f, toBlock: t }), ETHEREUM.deployedAtBlock, eHead, 5_000n);
+        eHead === null ? Promise.resolve([] as any[]) : logsSince(`eth:${address}:${event.name}`, (f, t) => l1.getLogs({ address, event, fromBlock: f, toBlock: t }) as any, ETHEREUM.deployedAtBlock, eHead!, 5_000n);
 
+      // Each source stands alone. The public Sepolia endpoints refuse old ranges or rate limit often enough that one
+      // of these failing is routine, and with Promise.all that one failure threw away the Whitechain marks too, so
+      // the LIVE chart said no mark had been recorded over hundreds of them. A source that fails shows nothing this
+      // time, and since logsSince only keeps what succeeded, the next refetch tries it again.
+      const orNone = (p: Promise<any[]>) => p.catch(() => [] as any[]);
       const [navs, allocs, returns, subs, offs, ons, marks] = await Promise.all([
-        wLogs(NavReported, WHITECHAIN.agUSD),
-        wLogs(Allocated, WHITECHAIN.allocator),
-        wLogs(ReturnSettled, WHITECHAIN.allocator),
-        eLogs(Subscribed, ETHEREUM.receiver),
-        eLogs(OffRamped, ETHEREUM.issuer),
-        eLogs(OnRamped, ETHEREUM.issuer),
-        eLogs(BookMarked, ETHEREUM.issuer),
+        orNone(wLogs(NavReported, WHITECHAIN.agUSD)),
+        orNone(wLogs(Allocated, WHITECHAIN.allocator)),
+        orNone(wLogs(ReturnSettled, WHITECHAIN.allocator)),
+        orNone(eLogs(Subscribed, ETHEREUM.receiver)),
+        orNone(eLogs(OffRamped, ETHEREUM.issuer)),
+        orNone(eLogs(OnRamped, ETHEREUM.issuer)),
+        orNone(eLogs(BookMarked, ETHEREUM.issuer)),
       ]);
 
       // When each row happened, from one block per chain rather than one request per row. Whitechain is an OP
       // Stack chain with a block exactly every second, so its times are exact; Sepolia slots are twelve seconds,
       // missed slots aside, which is close enough for "4m ago". Fetching every block's header instead is what got
       // the public Sepolia endpoint to answer 429 to a single page load.
-      const [wRef, eRef] = await Promise.all([wc!.getBlock({ blockNumber: wHead }), l1.getBlock({ blockNumber: eHead })]);
+      const [wRef, eRef] = await Promise.all([
+        wc!.getBlock({ blockNumber: wHead }),
+        eHead === null ? null : l1.getBlock({ blockNumber: eHead }).catch(() => null),
+      ]);
       const timeOf = (ref: { number: bigint | null; timestamp: bigint }, secs: number) => (n: bigint) =>
         Number(ref.timestamp) - Number((ref.number ?? 0n) - n) * secs;
       const wAt = timeOf(wRef, 1);
-      const eAt = timeOf(eRef, 12);
+      const eAt = eRef ? timeOf(eRef, 12) : () => undefined;
       const wTimes = { get: (b: string) => wAt(BigInt(b)) };
       const eTimes = { get: (b: string) => eAt(BigInt(b)) };
 
@@ -281,8 +314,9 @@ export function useRequests() {
     refetchInterval: REFRESH,
     queryFn: async (): Promise<Request[]> => {
       const head = await wc!.getBlockNumber();
-      const logs = await logsInChunks(
-        (f, t) => wc!.getLogs({ address: WHITECHAIN.agUSD, event: RedeemRequested, args: { owner: address }, fromBlock: f, toBlock: t }),
+      const logs = await logsSince(
+        `wc:requests:${address}`,
+        (f, t) => wc!.getLogs({ address: WHITECHAIN.agUSD, event: RedeemRequested, args: { owner: address }, fromBlock: f, toBlock: t }) as any,
         WHITECHAIN.deployedAtBlock,
         head,
         WC_LOG_RANGE,
