@@ -36,6 +36,8 @@ jobs:
         env:
           DEPLOYER_KEY: ${{ secrets.DEPLOYER_KEY }}
           ATTESTER_KEY: ${{ secrets.ATTESTER_KEY }}
+          # Optional: a dedicated Sepolia endpoint, tried before the public ones. Unset, it is skipped.
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
       - uses: actions/cache/save@v4
         if: always()
         with:
