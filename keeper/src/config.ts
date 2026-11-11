@@ -56,7 +56,15 @@ const sepoliaRpcs = [
   'https://eth-sepolia.api.onfinality.io/public',
   'https://sepolia.rpc.thirdweb.com',
 ].filter((u, i, all): u is string => !!u && all.indexOf(u) === i);
-const sepoliaTransport = fallback(sepoliaRpcs.map((u) => http(u)));
+// No retries inside viem, anywhere on this transport. viem's retry delay obeys the Retry-After of the last error,
+// and thirdweb answers 429 with Retry-After: 42523, so a single getLogs could sleep for twelve hours: that, not
+// the work, is what froze a relayer a few days behind. Each endpoint gets one bounded try, a failure hands over to
+// the next at once (publicnode answers ranges older than about two days with 4444, pruned history), and the
+// callers retry with a delay of their own choosing.
+const sepoliaTransport = fallback(
+  sepoliaRpcs.map((u) => http(u, { timeout: 15_000, retryCount: 0 })),
+  { retryCount: 0 },
+);
 
 export const wc = {
   public: createPublicClient({ chain: whitechainSepolia, transport: http() }),

@@ -35,9 +35,15 @@ export const l1 = createPublicClient({
   // rate limit on one is a slower answer rather than an empty page. thirdweb goes last: it caps getLogs at 1,000
   // blocks, under the 5,000 the activity feed reads at once, so first in line it failed every log request.
   batch: { multicall: true },
-  transport: fallback([
-    http('https://ethereum-sepolia-rpc.publicnode.com', { batch: true }),
-    http('https://eth-sepolia.api.onfinality.io/public', { batch: true }),
-    http('https://sepolia.rpc.thirdweb.com', { batch: true }),
-  ]),
+  // No retries inside viem: its retry delay obeys Retry-After, and thirdweb answers 429 with Retry-After: 42523,
+  // which parked a read for twelve hours. A failure moves to the next endpoint, and react-query's next refetch is
+  // the retry.
+  transport: fallback(
+    [
+      http('https://ethereum-sepolia-rpc.publicnode.com', { batch: true, retryCount: 0, timeout: 15_000 }),
+      http('https://eth-sepolia.api.onfinality.io/public', { batch: true, retryCount: 0, timeout: 15_000 }),
+      http('https://sepolia.rpc.thirdweb.com', { batch: true, retryCount: 0, timeout: 15_000 }),
+    ],
+    { retryCount: 0 },
+  ),
 });

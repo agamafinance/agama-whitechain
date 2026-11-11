@@ -20,6 +20,10 @@ Then the policy changed so that everything is reinvested as soon as possible. Ru
 - **An allocation sized to the reserve floor exactly was refused by seven micro-dollars.** Profit unlocks by the second, so the floor rises between the read and the block. The keeper now keeps a cent, or a basis point of the vault, above it.
 - **A receipt that never came froze a run for forty minutes.** An endpoint accepted a transaction and never passed it on, so nothing was pending on chain, and the wait for its receipt had no limit. Waits are now capped at three minutes; the tick fails and the next one starts again.
 
+Then the keeper ran out of gas on Whitechain from 7 to 11 November, and the first e2e after the top up hung for half an hour on its first relay:
+
+- **thirdweb answers 429 with `Retry-After: 42523`, and viem obeys it.** The fallback transport retries through the same code as a single endpoint, and its delay reads the Retry-After of the last error, so one getLogs could sleep for twelve hours. publicnode, first in line, keeps only about two days of Sepolia logs and answers older ranges with `4444 pruned history unavailable`, so a relayer a few days behind went to thirdweb on every page. Nothing in viem retries now, in the keeper or in the app; the keeper retries a page itself after two, four and six seconds, and a scan that still fails keeps the blocks it has read before failing the tick. 60,000 blocks of Sepolia now scan in under three minutes. `SEPOLIA_RPC_URL`, when set as a repository secret, is tried first.
+
 The e2e itself also had a sizing bug. With 5,000 deposited into a vault that had grown past 20,000, the buffer covered the "queued" exit and paid it on the spot. It now deposits the whole drip, and stops before starting if the vault is large enough that the exit would still not queue.
 
 ## The passing run, 1 November 2026
