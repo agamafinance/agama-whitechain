@@ -89,6 +89,11 @@ export const BOOK = {
 /// Moves under a dollar wait, so rounding dust never pays for a crossing.
 export const BUFFER = { minMove: 1_000_000n };
 
+/// How often the vault is marked to the book on Whitechain. Each mark is a reportNav of about 76k gas, and marking
+/// at the contract's own minimum (`minReportInterval`, ten minutes) spent 120 of them a day, 0.046 WBT, to move the
+/// price by a few millionths each time. Hourly keeps the price current to within an hour of accrual for a sixth of that.
+export const REPORT = { everySec: 3_600n };
+
 export const STATE_FILE = resolve(import.meta.dir, '../state.json');
 
 /// Sends and waits, and refuses to call a reverted transaction done. A receipt comes back for a revert too, and
