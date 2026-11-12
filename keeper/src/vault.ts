@@ -1,7 +1,7 @@
 // The Whitechain side: rebalance the buffer, mark the vault to the L1 position, and settle the queue.
 import type { Hex } from 'viem';
 import { AgamaL1ReceiverAbi, AgUSDAbi, CrossChainAllocatorAbi } from '../../abi';
-import { BUFFER, E, eth, sendChecked, W, wc } from './config';
+import { BUFFER, E, eth, REPORT, sendChecked, W, wc } from './config';
 
 const send = (address: Hex, abi: any, functionName: string, args: unknown[]) =>
   sendChecked(wc, { address, abi, functionName, args });
@@ -89,7 +89,8 @@ export async function report() {
   ]);
   const [, , , maxNavChangeBps, minReportInterval] = cfg;
   const now = BigInt(Math.floor(Date.now() / 1000));
-  if (s.lastReport !== 0n && now < s.lastReport + BigInt(minReportInterval)) return;
+  const every = BigInt(minReportInterval) > REPORT.everySec ? BigInt(minReportInterval) : REPORT.everySec;
+  if (s.lastReport !== 0n && now < s.lastReport + every) return;
   if (s.deployed === 0n) return;
   // A move larger than the guard is walked there in steps rather than refused.
   const max = (s.deployed * BigInt(maxNavChangeBps)) / 10_000n;

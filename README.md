@@ -111,7 +111,7 @@ Every burn in both directions names the contract on the far side as `destination
 | **Real** | Every contract, both chains, every transfer, every burn and mint, the vault's accounting, the queue, the guards. |
 | **Simulated** | The ABF partner, who runs no testnet. `AbfAssetIssuer` stands in, with their doors and their cash rule. Custody is the deployer's key, and borrower interest is minted at custody when collections are on-ramped. |
 | **Simulated** | Circle's attestation service, played by the keeper's attester key. |
-| **Testnet tempo** | Reports every 10 minutes and a 6 hour profit unlock, so a demo moves while somebody watches. |
+| **Testnet tempo** | The keeper reports hourly (the contract allows every 10 minutes) and a 6 hour profit unlock, so a demo moves while somebody watches. |
 
 The book accrues at 9% APR, the target of the partner's senior Flagship sleeve (8 to 9%). Each mark carries the hash of a loan tape listing the pools and what they have outstanding, so the figure on chain names a document an auditor could ask for.
 
